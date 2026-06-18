@@ -2,8 +2,8 @@ const COLS = [
   { id: 'todo',         label: 'To Do' },
   { id: 'waiting',      label: 'Waiting for Response' },
   { id: 'inprogress',   label: 'In Progress' },
-  { id: 'specialcare',  label: 'Special Care' },
-  { id: 'done',         label: 'Done' }
+  { id: 'done',         label: 'Done' },
+  { id: 'specialcare',  label: 'Special Care' }
 ];
 
 const CARD_CLASSES = {
@@ -86,7 +86,16 @@ function updateHeaderStats() {
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
-  if (tab === 'kb') renderBoard();
+  const speechBar = document.getElementById('speech-bar');
+  const kbView = document.getElementById('view-kb');
+  if (tab === 'kb') {
+    renderBoard();
+    speechBar.classList.add('visible');
+    kbView.classList.add('kb-with-bar');
+  } else {
+    speechBar.classList.remove('visible');
+    kbView.classList.remove('kb-with-bar');
+  }
 }
 
 // ── TOUCHPOINT GENERATOR ────────────────────────────────────────────────────
@@ -376,6 +385,8 @@ const TAG_CLASSES = {
 
 // ── KANBAN ──────────────────────────────────────────────────────────────────
 
+let dragId = null;
+
 function renderBoard() {
   const filter = document.getElementById('kb-filter').value;
   const board  = document.getElementById('board');
@@ -386,11 +397,33 @@ function renderBoard() {
 
     const colEl = document.createElement('div');
     colEl.className = `col ${COL_CLASSES[col.id] || ''}`;
+    colEl.dataset.colId = col.id;
     colEl.innerHTML = `
       <div class="col-header">
         <span class="col-title">${col.label}</span>
         <span class="col-count">${colTasks.length}</span>
       </div>`;
+
+    // Drop zone events on column
+    colEl.addEventListener('dragover', e => {
+      e.preventDefault();
+      colEl.classList.add('drag-over');
+    });
+    colEl.addEventListener('dragleave', e => {
+      if (!colEl.contains(e.relatedTarget)) colEl.classList.remove('drag-over');
+    });
+    colEl.addEventListener('drop', e => {
+      e.preventDefault();
+      colEl.classList.remove('drag-over');
+      if (dragId === null) return;
+      const t = tasks.find(x => x.id === dragId);
+      if (t && t.status !== col.id) {
+        t.status = col.id;
+        saveTasks();
+        renderBoard();
+      }
+      dragId = null;
+    });
 
     colTasks.forEach(t => {
       const dl      = dueLabel(t.due);
@@ -399,20 +432,38 @@ function renderBoard() {
 
       const card = document.createElement('div');
       card.className = `kanban-card ${cardCls}`;
+      card.draggable = true;
+      card.dataset.taskId = t.id;
       card.innerHTML = `
+        <div class="card-drag-handle" aria-hidden="true"><i class="ti ti-grip-horizontal"></i></div>
         <div class="card-title">${escHtml(t.title)}</div>
         <div class="card-client">${escHtml(t.client || '')}</div>
         <div class="card-meta">
           <span class="tag ${tagCls}">${t.tag}</span>
           ${dl ? `<span class="due-tag${dl.over ? ' over' : ''}">${dl.over ? '<i class="ti ti-alert-circle" style="font-size:12px;vertical-align:-1px"></i> ' : ''}${escHtml(dl.text)}</span>` : ''}
         </div>`;
-      card.onclick = () => openDetail(t.id);
+
+      card.addEventListener('dragstart', e => {
+        dragId = t.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+
+      // Click to open detail — only if not dragging
+      card.addEventListener('click', () => {
+        if (dragId === null) openDetail(t.id);
+      });
+
       colEl.appendChild(card);
     });
 
     const addBtn = document.createElement('button');
     addBtn.className = 'add-btn';
-    addBtn.innerHTML = '<i class="ti ti-plus"></i> Dodaj';
+    addBtn.innerHTML = '<i class="ti ti-plus"></i> Add';
     addBtn.onclick = () => openAdd(col.id);
     colEl.appendChild(addBtn);
 
@@ -528,6 +579,109 @@ document.addEventListener('keydown', e => {
 // Enter to submit forms
 document.getElementById('new-title').addEventListener('keydown', e => { if (e.key === 'Enter') saveNew(); });
 document.getElementById('apikey-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveApiKey(); });
+
+// ── SPEECH TO TEXT ──────────────────────────────────────────────────────────
+
+let recognition = null;
+let isRecording = false;
+
+function initSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const r = new SpeechRecognition();
+  r.continuous = false;
+  r.interimResults = true;
+  r.lang = 'en-US';
+
+  r.onresult = e => {
+    const transcript = [...e.results].map(r => r[0].transcript).join('');
+    document.getElementById('speech-input').value = transcript;
+  };
+
+  r.onend = () => {
+    isRecording = false;
+    updateMicBtn();
+  };
+
+  r.onerror = () => {
+    isRecording = false;
+    updateMicBtn();
+  };
+
+  return r;
+}
+
+function updateMicBtn() {
+  const btn  = document.getElementById('mic-btn');
+  const icon = document.getElementById('mic-icon');
+  if (isRecording) {
+    btn.classList.add('recording');
+    icon.className = 'ti ti-microphone-off';
+    btn.title = 'Stop recording';
+  } else {
+    btn.classList.remove('recording');
+    icon.className = 'ti ti-microphone';
+    btn.title = 'Click to speak';
+  }
+}
+
+function toggleMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Speech recognition is not supported in this browser. Try Chrome.');
+    return;
+  }
+  if (isRecording) {
+    recognition?.stop();
+    isRecording = false;
+    updateMicBtn();
+    return;
+  }
+  recognition = initSpeech();
+  if (!recognition) return;
+  isRecording = true;
+  updateMicBtn();
+  recognition.start();
+}
+
+function speechAddTask() {
+  const input = document.getElementById('speech-input');
+  const text  = input.value.trim();
+  if (!text) { input.focus(); return; }
+
+  const colId = document.getElementById('speech-col').value;
+
+  // Try to auto-detect client from "with [Client]" or "for [Client]" pattern
+  let title  = text;
+  let client = '';
+  const clientMatch = text.match(/(?:with|for|about|from)\s+([A-Z][a-zA-Z\s]+?)(?:\s+(?:about|regarding|re:|on|-)|\.|$)/);
+  if (clientMatch) client = clientMatch[1].trim();
+
+  // Auto-detect tag from keywords
+  let tag = 'Follow-up';
+  const lower = text.toLowerCase();
+  if (lower.includes('bug') || lower.includes('error') || lower.includes('broken') || lower.includes('crash')) tag = 'Bug';
+  else if (lower.includes('feature') || lower.includes('request') || lower.includes('enhancement')) tag = 'Feature';
+  else if (lower.includes('invoice') || lower.includes('billing') || lower.includes('payment') || lower.includes('charge')) tag = 'Billing';
+  else if (lower.includes('support') || lower.includes('issue') || lower.includes('problem') || lower.includes('ticket')) tag = 'Support';
+
+  tasks.push({ id: nextId++, title, client, tag, status: colId, due: '', note: '' });
+  saveTasks();
+  renderBoard();
+  updateHeaderStats();
+
+  // Clear and show confirmation
+  input.value = '';
+  input.placeholder = '✓ Task added!';
+  setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 2000);
+}
+
+// Enter key in speech input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('speech-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') speechAddTask();
+  });
+});
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
