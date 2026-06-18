@@ -82,6 +82,42 @@ function switchTab(tab) {
 
 // ── TOUCHPOINT GENERATOR ────────────────────────────────────────────────────
 
+let transcriptMode = 'paste'; // 'paste' | 'file'
+let fileContent = '';
+
+function switchTranscriptTab(mode) {
+  transcriptMode = mode;
+  document.getElementById('ttab-paste').classList.toggle('active', mode === 'paste');
+  document.getElementById('ttab-file').classList.toggle('active', mode === 'file');
+  document.getElementById('tt-paste').style.display = mode === 'paste' ? 'block' : 'none';
+  document.getElementById('tt-file').style.display  = mode === 'file'  ? 'block' : 'none';
+}
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    fileContent = ev.target.result;
+    document.getElementById('file-loaded').style.display = 'flex';
+    document.getElementById('file-loaded-name').textContent = file.name;
+    document.getElementById('file-drop').style.display = 'none';
+  };
+  reader.readAsText(file);
+}
+
+function clearFile() {
+  fileContent = '';
+  document.getElementById('tp-file').value = '';
+  document.getElementById('file-loaded').style.display = 'none';
+  document.getElementById('file-drop').style.display = 'flex';
+}
+
+function getTranscriptText() {
+  if (transcriptMode === 'file') return fileContent;
+  return document.getElementById('tp-raw').value.trim();
+}
+
 function getApiKey() {
   return localStorage.getItem(API_KEY_STORAGE) || '';
 }
@@ -94,9 +130,67 @@ function saveApiKey() {
   generateTP();
 }
 
+// Renders structured touchpoint sections into the result card
+function renderSections(parsed) {
+  const container = document.getElementById('tp-sections');
+  container.innerHTML = '';
+
+  const sections = [
+    { key: 'customerInfo',   label: 'Customer Information (Name, Role)' },
+    { key: 'meetingDetails', label: 'Meeting Details (Duration, Objective)' },
+    { key: 'typeContext',    label: 'Type of Request and Context' },
+    { key: 'valueReal',      label: 'Value Realisation' },
+    { key: 'nextSteps',      label: 'Next Steps' },
+  ];
+
+  sections.forEach(s => {
+    const val = parsed[s.key];
+    if (!val) return;
+    const div = document.createElement('div');
+    div.className = 'tp-section';
+    div.innerHTML = `<div class="tp-section-label">${s.label}</div>`;
+
+    if (s.key === 'nextSteps' && Array.isArray(val)) {
+      const ul = document.createElement('ul');
+      ul.className = 'tp-next-steps tp-section-content';
+      val.forEach(step => {
+        const li = document.createElement('li');
+        li.textContent = step;
+        ul.appendChild(li);
+      });
+      div.appendChild(ul);
+    } else {
+      const p = document.createElement('div');
+      p.className = 'tp-section-content';
+      p.textContent = val;
+      div.appendChild(p);
+    }
+    container.appendChild(div);
+  });
+}
+
+// Build plain text for clipboard (Totango copy)
+function buildPlainText(parsed) {
+  const lines = [];
+  if (parsed.customerInfo)   lines.push(`Customer Information (Name, Role):\n${parsed.customerInfo}`);
+  if (parsed.meetingDetails) lines.push(`Meeting Details (Duration, Objective):\n${parsed.meetingDetails}`);
+  if (parsed.typeContext)    lines.push(`Type of Request and Context:\n${parsed.typeContext}`);
+  if (parsed.valueReal)      lines.push(`Value Realisation:\n${parsed.valueReal}`);
+  if (parsed.nextSteps) {
+    const steps = Array.isArray(parsed.nextSteps)
+      ? parsed.nextSteps.map(s => `- ${s}`).join('\n')
+      : parsed.nextSteps;
+    lines.push(`Next Steps:\n${steps}`);
+  }
+  return lines.join('\n\n');
+}
+
 async function generateTP() {
-  const raw = document.getElementById('tp-raw').value.trim();
-  if (!raw) { document.getElementById('tp-raw').focus(); return; }
+  const transcript = getTranscriptText();
+  if (!transcript) {
+    if (transcriptMode === 'paste') document.getElementById('tp-raw').focus();
+    return;
+  }
 
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -110,30 +204,41 @@ async function generateTP() {
   pendingClient = client;
   pendingType   = type;
 
-  const wrap   = document.getElementById('tp-result-wrap');
-  const output = document.getElementById('tp-result');
-  const btn    = document.getElementById('btn-generate');
+  const wrap = document.getElementById('tp-result-wrap');
+  const btn  = document.getElementById('btn-generate');
+  const container = document.getElementById('tp-sections');
 
   wrap.style.display = 'block';
-  output.className = 'tp-output loading';
-  output.textContent = 'Generiram touchpoint...';
+  container.innerHTML = '<div class="tp-section-content loading">Generiram touchpoint...</div>';
   document.getElementById('feedback-msg').textContent = '';
   document.getElementById('result-client-label').textContent = client || '';
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Generiram...';
 
-  const prompt = `Ti si Customer Success Manager koji piše touchpoint zabilješke za Totango.
+  const prompt = `Du bist ein Customer Success Manager bei PlanRadar und schreibst Touchpoint-Notizen für Totango auf Deutsch.
 
-Klijent: ${client || '(nije naveden)'}
-Vrsta interakcije: ${type}
-Opis situacije: ${raw}
+Fülle das folgende Template basierend auf dem gegebenen Transcript aus. Antworte NUR mit einem validen JSON-Objekt, ohne Markdown, ohne Erklärungen.
 
-Napiši strukturiran touchpoint na hrvatskom jeziku u 4-6 rečenica. Obuhvati:
-- Što se dogodilo / kontekst
-- Akcija koja je poduzeta
-- Sljedeći korak / follow-up (ako postoji)
+Transcript:
+${transcript}
 
-Piši profesionalno ali jasno. Bez naslova, bez bullet točaka — samo čisti tekst koji se direktno kopira u Totango. Bez markdown formatiranja.`;
+Klient: ${client || '(nicht angegeben)'}
+Art der Interaktion: ${type}
+
+Fülle dieses JSON aus (alle Felder auf Deutsch):
+{
+  "customerInfo": "Name und Rolle des Kunden (z.B. Max Mustermann, Projektleiter)",
+  "meetingDetails": "Dauer und Ziel des Meetings",
+  "typeContext": "Art der Anfrage und Kontext — was war das Hauptthema/Problem",
+  "valueReal": "Welchen Mehrwert hat der Kunde aus diesem Touchpoint erhalten",
+  "nextSteps": ["Nächster Schritt 1", "Nächster Schritt 2"]
+}
+
+Wichtig:
+- Alles auf Deutsch
+- nextSteps als Array von konkreten Aktionen mit Verantwortlichem (z.B. "Ilija sendet Einladung für KI-Demo bis 20.06.")
+- Keine Platzhalter lassen — wenn Information fehlt, sinnvoll interpolieren
+- Nur reines JSON zurückgeben`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -146,15 +251,14 @@ Piši profesionalno ali jasno. Bez naslova, bez bullet točaka — samo čisti t
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     if (res.status === 401) {
       localStorage.removeItem(API_KEY_STORAGE);
-      output.className = 'tp-output loading';
-      output.textContent = 'Neispravan API ključ. Pokušaj ponovo.';
+      container.innerHTML = '<div class="tp-section-content loading">Neispravan API ključ. Pokušaj ponovo.</div>';
       setTimeout(() => {
         document.getElementById('apikey-modal').classList.add('open');
         document.getElementById('apikey-input').value = '';
@@ -164,12 +268,23 @@ Piši profesionalno ali jasno. Bez naslova, bez bullet točaka — samo čisti t
     }
 
     const data = await res.json();
-    generatedText = data.content?.[0]?.text || 'Greška pri generiranju.';
-    output.className = 'tp-output';
-    output.textContent = generatedText;
+    const raw = data.content?.[0]?.text || '';
+
+    let parsed;
+    try {
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      container.innerHTML = `<div class="tp-section-content">${raw}</div>`;
+      generatedText = raw;
+      return;
+    }
+
+    generatedText = buildPlainText(parsed);
+    renderSections(parsed);
+
   } catch (e) {
-    output.className = 'tp-output loading';
-    output.textContent = 'Greška pri pozivu API-ja. Provjeri internet vezu.';
+    container.innerHTML = '<div class="tp-section-content loading">Greška pri pozivu API-ja. Provjeri internet vezu.</div>';
     generatedText = '';
   } finally {
     btn.disabled = false;
@@ -194,10 +309,21 @@ function copyTP() {
 
 function addToBoard() {
   if (!generatedText) return;
-  const rawVal = document.getElementById('tp-raw').value.trim();
-  const title  = rawVal.length > 65 ? rawVal.slice(0, 62) + '...' : rawVal;
-  const due    = document.getElementById('tp-due').value;
-  const tag    = pendingType === 'Check-in' ? 'Follow-up' : pendingType;
+
+  // Try to extract a meaningful title from typeContext or first next step
+  const sections = document.querySelectorAll('.tp-section-content');
+  let title = '';
+  sections.forEach((el, i) => {
+    if (i === 2 && !title) title = el.textContent.trim().slice(0, 65); // typeContext
+  });
+  if (!title) {
+    const raw = transcriptMode === 'paste' ? document.getElementById('tp-raw').value.trim() : fileContent;
+    title = raw.slice(0, 65);
+  }
+  if (title.length >= 65) title = title.slice(0, 62) + '...';
+
+  const due = document.getElementById('tp-due').value;
+  const tag = pendingType === 'Check-in' ? 'Follow-up' : pendingType;
 
   tasks.push({
     id: nextId++,
@@ -226,6 +352,7 @@ function resetTP() {
   document.getElementById('tp-due').value    = '';
   document.getElementById('tp-result-wrap').style.display = 'none';
   document.getElementById('feedback-msg').textContent     = '';
+  clearFile();
   generatedText = ''; pendingClient = ''; pendingType = '';
 }
 

@@ -56,10 +56,35 @@
                 </select>
               </div>
             </div>
+
             <div class="field">
-              <label for="tp-raw">Što se dogodilo?</label>
-              <textarea id="tp-raw" placeholder="Slobodni tekst — npr: Klijent se javio da ne može eksportati PDF izvještaj. Poslao sam mail supportu, čekam odgovor do petka." rows="4"></textarea>
+              <label>Transcript</label>
+              <div class="transcript-tabs">
+                <button class="tt-tab active" onclick="switchTranscriptTab('paste')" id="ttab-paste">
+                  <i class="ti ti-clipboard"></i> Zalijepi tekst
+                </button>
+                <button class="tt-tab" onclick="switchTranscriptTab('file')" id="ttab-file">
+                  <i class="ti ti-file-upload"></i> Učitaj datoteku
+                </button>
+              </div>
+              <div id="tt-paste">
+                <textarea id="tp-raw" placeholder="Zalijepi transcript ovdje — Teams/Zoom summary, key points, ili slobodni opis situacije..." rows="6"></textarea>
+              </div>
+              <div id="tt-file" style="display:none">
+                <div class="file-drop" id="file-drop" onclick="document.getElementById('tp-file').click()">
+                  <i class="ti ti-file-text" style="font-size:24px;color:var(--text-3)"></i>
+                  <span>Klikni ili prevuci .txt datoteku</span>
+                  <span class="file-hint">Podržava .txt format</span>
+                </div>
+                <input type="file" id="tp-file" accept=".txt,.md" style="display:none" onchange="handleFileUpload(event)" />
+                <div id="file-loaded" class="file-loaded" style="display:none">
+                  <i class="ti ti-circle-check" style="color:var(--teal-text)"></i>
+                  <span id="file-loaded-name"></span>
+                  <button class="btn-clear-file" onclick="clearFile()"><i class="ti ti-x"></i></button>
+                </div>
+              </div>
             </div>
+
             <div class="row2">
               <div class="field">
                 <label for="tp-due">Rok follow-upa</label>
@@ -78,7 +103,7 @@
               <h2 class="section-title">Generirani touchpoint</h2>
               <span class="result-client" id="result-client-label"></span>
             </div>
-            <div class="tp-output" id="tp-result"></div>
+            <div class="tp-sections" id="tp-sections"></div>
             <div class="action-row">
               <button class="btn" onclick="copyTP()">
                 <i class="ti ti-copy"></i> Kopiraj za Totango
