@@ -5,13 +5,20 @@ const COLS = [
   { id: 'done',       label: 'Riješeno' }
 ];
 
-const TAG_CLASSES = {
-  'Support':   't-support',
-  'Bug':       't-bug',
-  'Feature':   't-feature',
-  'Billing':   't-billing',
-  'Follow-up': 't-followup',
-  'Check-in':  't-checkin'
+const CARD_CLASSES = {
+  'Support':   'card-support',
+  'Bug':       'card-bug',
+  'Feature':   'card-feature',
+  'Billing':   'card-billing',
+  'Follow-up': 'card-followup',
+  'Check-in':  'card-checkin'
+};
+
+const COL_CLASSES = {
+  'todo':       'col-todo',
+  'waiting':    'col-waiting',
+  'inprogress': 'col-inprogress',
+  'done':       'col-done'
 };
 
 const STORAGE_KEY = 'cs_dashboard_tasks_v1';
@@ -356,6 +363,15 @@ function resetTP() {
   generatedText = ''; pendingClient = ''; pendingType = '';
 }
 
+const TAG_CLASSES = {
+  'Support':   't-support',
+  'Bug':       't-bug',
+  'Feature':   't-feature',
+  'Billing':   't-billing',
+  'Follow-up': 't-followup',
+  'Check-in':  't-checkin'
+};
+
 // ── KANBAN ──────────────────────────────────────────────────────────────────
 
 function renderBoard() {
@@ -367,7 +383,7 @@ function renderBoard() {
     const colTasks = tasks.filter(t => t.status === col.id && (!filter || t.tag === filter));
 
     const colEl = document.createElement('div');
-    colEl.className = 'col';
+    colEl.className = `col ${COL_CLASSES[col.id] || ''}`;
     colEl.innerHTML = `
       <div class="col-header">
         <span class="col-title">${col.label}</span>
@@ -375,16 +391,17 @@ function renderBoard() {
       </div>`;
 
     colTasks.forEach(t => {
-      const dl  = dueLabel(t.due);
-      const cls = TAG_CLASSES[t.tag] || 't-support';
+      const dl      = dueLabel(t.due);
+      const tagCls  = TAG_CLASSES[t.tag]  || 't-support';
+      const cardCls = CARD_CLASSES[t.tag] || 'card-support';
 
       const card = document.createElement('div');
-      card.className = 'kanban-card';
+      card.className = `kanban-card ${cardCls}`;
       card.innerHTML = `
         <div class="card-title">${escHtml(t.title)}</div>
         <div class="card-client">${escHtml(t.client || '')}</div>
         <div class="card-meta">
-          <span class="tag ${cls}">${t.tag}</span>
+          <span class="tag ${tagCls}">${t.tag}</span>
           ${dl ? `<span class="due-tag${dl.over ? ' over' : ''}">${dl.over ? '<i class="ti ti-alert-circle" style="font-size:12px;vertical-align:-1px"></i> ' : ''}${escHtml(dl.text)}</span>` : ''}
         </div>`;
       card.onclick = () => openDetail(t.id);
