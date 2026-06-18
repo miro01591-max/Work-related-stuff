@@ -577,20 +577,16 @@ body {
 
 /* SPEECH BAR */
 .speech-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background: var(--surface);
-  border-top: 0.5px solid var(--border);
-  padding: 12px 24px;
-  display: none;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
   align-items: center;
   gap: 10px;
-  z-index: 20;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  margin-top: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.speech-bar.visible { display: flex; }
 
 .speech-input {
   flex: 1;
@@ -666,9 +662,6 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
-
-/* pad bottom of kanban when speech bar visible */
-.kb-with-bar { padding-bottom: 80px; }
 
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }

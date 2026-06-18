@@ -86,16 +86,7 @@ function updateHeaderStats() {
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
-  const speechBar = document.getElementById('speech-bar');
-  const kbView = document.getElementById('view-kb');
-  if (tab === 'kb') {
-    renderBoard();
-    speechBar.classList.add('visible');
-    kbView.classList.add('kb-with-bar');
-  } else {
-    speechBar.classList.remove('visible');
-    kbView.classList.remove('kb-with-bar');
-  }
+  if (tab === 'kb') renderBoard();
 }
 
 // ── TOUCHPOINT GENERATOR ────────────────────────────────────────────────────

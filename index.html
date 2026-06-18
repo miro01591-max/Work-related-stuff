@@ -136,6 +136,25 @@
           </button>
         </div>
         <div class="board" id="board"></div>
+
+        <!-- SPEECH BAR -->
+        <div class="speech-bar" id="speech-bar">
+          <span class="speech-label">Quick add:</span>
+          <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Click to speak">
+            <i class="ti ti-microphone" id="mic-icon"></i>
+          </button>
+          <input class="speech-input" id="speech-input" type="text" placeholder='Type or speak a task... e.g. "Follow up with Acme about login issue"' />
+          <select class="speech-col-select" id="speech-col">
+            <option value="todo">To Do</option>
+            <option value="waiting">Waiting</option>
+            <option value="inprogress">In Progress</option>
+            <option value="done">Done</option>
+            <option value="specialcare">Special Care</option>
+          </select>
+          <button class="speech-add-btn" onclick="speechAddTask()">
+            <i class="ti ti-circle-plus"></i> Add
+          </button>
+        </div>
       </div>
 
     </main>
