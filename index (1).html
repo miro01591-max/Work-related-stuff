@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo"><i class="ti ti-layout-kanban"></i> CS Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <span class="stat-pill">Otvoreno: <strong id="hdr-open">0</strong></span>
+        <span class="stat-pill overdue-pill">Zaostalo: <strong id="hdr-over">0</strong></span>
+        <button class="btn btn-primary" id="btn-new-tp" onclick="switchTab('tp')">
+          <i class="ti ti-plus"></i> Novi touchpoint
+        </button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="tp" onclick="switchTab('tp')">
+        <i class="ti ti-file-text"></i> Novi touchpoint
+      </button>
+      <button class="tab" data-tab="kb" onclick="switchTab('kb')">
+        <i class="ti ti-layout-kanban"></i> Board
+        <span class="badge" id="kb-badge" style="display:none"></span>
+      </button>
+    </nav>
+
+    <main class="content">
+
+      <!-- TOUCHPOINT TAB -->
+      <div class="view active" id="view-tp">
+        <div class="tp-wrap">
+          <div class="tp-form card">
+            <h2 class="section-title">Novi touchpoint</h2>
+            <div class="row2">
+              <div class="field">
+                <label for="tp-client">Klijent</label>
+                <input id="tp-client" type="text" placeholder="Ime klijenta ili kompanije" />
+              </div>
+              <div class="field">
+                <label for="tp-type">Vrsta interakcije</label>
+                <select id="tp-type">
+                  <option value="Support">Support problem</option>
+                  <option value="Follow-up">Follow-up</option>
+                  <option value="Bug">Bug prijava</option>
+                  <option value="Feature">Feature zahtjev</option>
+                  <option value="Billing">Billing</option>
+                  <option value="Check-in">Check-in</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Transcript</label>
+              <div class="transcript-tabs">
+                <button class="tt-tab active" onclick="switchTranscriptTab('paste')" id="ttab-paste">
+                  <i class="ti ti-clipboard"></i> Zalijepi tekst
+                </button>
+                <button class="tt-tab" onclick="switchTranscriptTab('file')" id="ttab-file">
+                  <i class="ti ti-file-upload"></i> Učitaj datoteku
+                </button>
+              </div>
+              <div id="tt-paste">
+                <textarea id="tp-raw" placeholder="Zalijepi transcript ovdje — Teams/Zoom summary, key points, ili slobodni opis situacije..." rows="6"></textarea>
+              </div>
+              <div id="tt-file" style="display:none">
+                <div class="file-drop" id="file-drop" onclick="document.getElementById('tp-file').click()">
+                  <i class="ti ti-file-text" style="font-size:24px;color:var(--text-3)"></i>
+                  <span>Klikni ili prevuci .txt datoteku</span>
+                  <span class="file-hint">Podržava .txt format</span>
+                </div>
+                <input type="file" id="tp-file" accept=".txt,.md" style="display:none" onchange="handleFileUpload(event)" />
+                <div id="file-loaded" class="file-loaded" style="display:none">
+                  <i class="ti ti-circle-check" style="color:var(--teal-text)"></i>
+                  <span id="file-loaded-name"></span>
+                  <button class="btn-clear-file" onclick="clearFile()"><i class="ti ti-x"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="field">
+                <label for="tp-due">Rok follow-upa</label>
+                <input id="tp-due" type="date" />
+              </div>
+              <div class="field field-action">
+                <button class="btn btn-primary btn-full" id="btn-generate" onclick="generateTP()">
+                  <i class="ti ti-sparkles"></i> Generiraj touchpoint
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tp-result card" id="tp-result-wrap" style="display:none">
+            <div class="result-header">
+              <h2 class="section-title">Generirani touchpoint</h2>
+              <span class="result-client" id="result-client-label"></span>
+            </div>
+            <div class="tp-sections" id="tp-sections"></div>
+            <div class="action-row">
+              <button class="btn" onclick="copyTP()">
+                <i class="ti ti-copy"></i> Kopiraj za Totango
+              </button>
+              <button class="btn btn-success" onclick="addToBoard()">
+                <i class="ti ti-circle-plus"></i> Dodaj u board
+              </button>
+              <button class="btn btn-ghost" onclick="resetTP()">
+                <i class="ti ti-refresh"></i> Novi
+              </button>
+            </div>
+            <div class="feedback-msg" id="feedback-msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN TAB -->
+      <div class="view" id="view-kb">
+        <div class="kb-toolbar">
+          <select class="filter-select" id="kb-filter" onchange="renderBoard()">
+            <option value="">Sve kategorije</option>
+            <option>Support</option>
+            <option>Bug</option>
+            <option>Feature</option>
+            <option>Billing</option>
+            <option>Follow-up</option>
+          </select>
+          <button class="btn btn-sm" onclick="openAdd('todo')">
+            <i class="ti ti-plus"></i> Ručno dodaj
+          </button>
+        </div>
+        <div class="board" id="board"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- DETAIL MODAL -->
+  <div class="modal-bg" id="det-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="det-title"></h3>
+        <button class="icon-btn" onclick="closeDetail()" aria-label="Zatvori"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-client" id="det-client"></div>
+      <div class="field">
+        <label>Status</label>
+        <div class="status-row" id="det-status-row"></div>
+      </div>
+      <div class="field">
+        <label for="det-note">Bilješka / touchpoint</label>
+        <textarea id="det-note" rows="5"></textarea>
+      </div>
+      <div class="field">
+        <label for="det-due">Rok</label>
+        <input id="det-due" type="date" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger-ghost" onclick="deleteTask()">
+          <i class="ti ti-trash"></i> Obriši
+        </button>
+        <div class="modal-footer-right">
+          <button class="btn" onclick="closeDetail()">Odustani</button>
+          <button class="btn btn-primary" onclick="saveDetail()">Spremi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD MODAL -->
+  <div class="modal-bg" id="add-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Novi task</h3>
+        <button class="icon-btn" onclick="closeAdd()" aria-label="Zatvori"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="field">
+        <label for="new-title">Naslov</label>
+        <input id="new-title" type="text" placeholder="Kratki opis problema..." />
+      </div>
+      <div class="field">
+        <label for="new-client">Klijent</label>
+        <input id="new-client" type="text" placeholder="Ime klijenta" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="new-tag">Kategorija</label>
+          <select id="new-tag">
+            <option>Support</option><option>Bug</option><option>Feature</option>
+            <option>Billing</option><option>Follow-up</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="new-due">Rok</label>
+          <input id="new-due" type="date" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="new-note">Bilješka</label>
+        <textarea id="new-note" rows="3" placeholder="Detalji, ticket broj, link..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <div></div>
+        <div class="modal-footer-right">
+          <button class="btn" onclick="closeAdd()">Odustani</button>
+          <button class="btn btn-primary" onclick="saveNew()">Dodaj task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API KEY MODAL -->
+  <div class="modal-bg" id="apikey-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Anthropic API ključ</h3>
+      </div>
+      <p class="modal-desc">Za generiranje touchpointova potreban je Anthropic API ključ. Sprema se samo lokalno u tvom browseru.</p>
+      <div class="field">
+        <label for="apikey-input">API ključ</label>
+        <input id="apikey-input" type="password" placeholder="sk-ant-..." />
+      </div>
+      <div class="modal-footer">
+        <a class="link-sm" href="https://console.anthropic.com/settings/keys" target="_blank">
+          <i class="ti ti-external-link"></i> Dohvati ključ
+        </a>
+        <div class="modal-footer-right">
+          <button class="btn btn-primary" onclick="saveApiKey()">Spremi i nastavi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
