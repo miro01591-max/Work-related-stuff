@@ -14,10 +14,10 @@
         <span class="logo"><i class="ti ti-layout-kanban"></i> CS Dashboard</span>
       </div>
       <div class="topbar-right">
-        <span class="stat-pill">Otvoreno: <strong id="hdr-open">0</strong></span>
-        <span class="stat-pill overdue-pill">Zaostalo: <strong id="hdr-over">0</strong></span>
+        <span class="stat-pill">Open: <strong id="hdr-open">0</strong></span>
+        <span class="stat-pill overdue-pill">Overdue: <strong id="hdr-over">0</strong></span>
         <button class="btn btn-primary" id="btn-new-tp" onclick="switchTab('tp')">
-          <i class="ti ti-plus"></i> Novi touchpoint
+          <i class="ti ti-plus"></i> New touchpoint
         </button>
       </div>
     </header>
@@ -124,7 +124,7 @@
       <div class="view" id="view-kb">
         <div class="kb-toolbar">
           <select class="filter-select" id="kb-filter" onchange="renderBoard()">
-            <option value="">Sve kategorije</option>
+            <option value="">All categories</option>
             <option>Support</option>
             <option>Bug</option>
             <option>Feature</option>
@@ -132,7 +132,7 @@
             <option>Follow-up</option>
           </select>
           <button class="btn btn-sm" onclick="openAdd('todo')">
-            <i class="ti ti-plus"></i> Ručno dodaj
+            <i class="ti ti-plus"></i> Add task
           </button>
         </div>
         <div class="board" id="board"></div>
@@ -146,7 +146,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3 id="det-title"></h3>
-        <button class="icon-btn" onclick="closeDetail()" aria-label="Zatvori"><i class="ti ti-x"></i></button>
+        <button class="icon-btn" onclick="closeDetail()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
       <div class="modal-client" id="det-client"></div>
       <div class="field">
@@ -154,20 +154,20 @@
         <div class="status-row" id="det-status-row"></div>
       </div>
       <div class="field">
-        <label for="det-note">Bilješka / touchpoint</label>
+        <label for="det-note">Notes / touchpoint</label>
         <textarea id="det-note" rows="5"></textarea>
       </div>
       <div class="field">
-        <label for="det-due">Rok</label>
+        <label for="det-due">Due date</label>
         <input id="det-due" type="date" />
       </div>
       <div class="modal-footer">
         <button class="btn btn-danger-ghost" onclick="deleteTask()">
-          <i class="ti ti-trash"></i> Obriši
+          <i class="ti ti-trash"></i> Delete
         </button>
         <div class="modal-footer-right">
-          <button class="btn" onclick="closeDetail()">Odustani</button>
-          <button class="btn btn-primary" onclick="saveDetail()">Spremi</button>
+          <button class="btn" onclick="closeDetail()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveDetail()">Save</button>
         </div>
       </div>
     </div>
@@ -177,39 +177,39 @@
   <div class="modal-bg" id="add-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3>Novi task</h3>
-        <button class="icon-btn" onclick="closeAdd()" aria-label="Zatvori"><i class="ti ti-x"></i></button>
+        <h3>New task</h3>
+        <button class="icon-btn" onclick="closeAdd()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
       <div class="field">
-        <label for="new-title">Naslov</label>
-        <input id="new-title" type="text" placeholder="Kratki opis problema..." />
+        <label for="new-title">Title</label>
+        <input id="new-title" type="text" placeholder="Short description..." />
       </div>
       <div class="field">
-        <label for="new-client">Klijent</label>
-        <input id="new-client" type="text" placeholder="Ime klijenta" />
+        <label for="new-client">Client</label>
+        <input id="new-client" type="text" placeholder="Client name" />
       </div>
       <div class="row2">
         <div class="field">
-          <label for="new-tag">Kategorija</label>
+          <label for="new-tag">Category</label>
           <select id="new-tag">
             <option>Support</option><option>Bug</option><option>Feature</option>
             <option>Billing</option><option>Follow-up</option>
           </select>
         </div>
         <div class="field">
-          <label for="new-due">Rok</label>
+          <label for="new-due">Due date</label>
           <input id="new-due" type="date" />
         </div>
       </div>
       <div class="field">
-        <label for="new-note">Bilješka</label>
-        <textarea id="new-note" rows="3" placeholder="Detalji, ticket broj, link..."></textarea>
+        <label for="new-note">Notes</label>
+        <textarea id="new-note" rows="3" placeholder="Details, ticket number, link..."></textarea>
       </div>
       <div class="modal-footer">
         <div></div>
         <div class="modal-footer-right">
-          <button class="btn" onclick="closeAdd()">Odustani</button>
-          <button class="btn btn-primary" onclick="saveNew()">Dodaj task</button>
+          <button class="btn" onclick="closeAdd()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveNew()">Add task</button>
         </div>
       </div>
     </div>

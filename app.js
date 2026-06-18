@@ -1,8 +1,9 @@
 const COLS = [
-  { id: 'todo',       label: 'To do' },
-  { id: 'waiting',    label: 'Čeka odgovor' },
-  { id: 'inprogress', label: 'U tijeku' },
-  { id: 'done',       label: 'Riješeno' }
+  { id: 'todo',         label: 'To Do' },
+  { id: 'waiting',      label: 'Waiting for Response' },
+  { id: 'inprogress',   label: 'In Progress' },
+  { id: 'specialcare',  label: 'Special Care' },
+  { id: 'done',         label: 'Done' }
 ];
 
 const CARD_CLASSES = {
@@ -15,10 +16,11 @@ const CARD_CLASSES = {
 };
 
 const COL_CLASSES = {
-  'todo':       'col-todo',
-  'waiting':    'col-waiting',
-  'inprogress': 'col-inprogress',
-  'done':       'col-done'
+  'todo':        'col-todo',
+  'waiting':     'col-waiting',
+  'inprogress':  'col-inprogress',
+  'specialcare': 'col-specialcare',
+  'done':        'col-done'
 };
 
 const STORAGE_KEY = 'cs_dashboard_tasks_v1';
