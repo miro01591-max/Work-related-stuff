@@ -594,9 +594,19 @@ function initSpeech() {
     updateMicBtn();
   };
 
-  r.onerror = () => {
+  r.onerror = e => {
     isRecording = false;
     updateMicBtn();
+    const input = document.getElementById('speech-input');
+    if (e.error === 'not-allowed') {
+      input.placeholder = '⚠ Microphone access denied — allow it in your browser settings';
+    } else if (e.error === 'no-speech') {
+      input.placeholder = 'No speech detected — try again';
+      setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
+    } else {
+      input.placeholder = `Error: ${e.error} — try again`;
+      setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
+    }
   };
 
   return r;
@@ -616,22 +626,33 @@ function updateMicBtn() {
   }
 }
 
-function toggleMic() {
+async function toggleMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert('Speech recognition is not supported in this browser. Try Chrome.');
+    document.getElementById('speech-input').placeholder = '⚠ Speech not supported — use Chrome or Edge';
     return;
   }
+
   if (isRecording) {
     recognition?.stop();
     isRecording = false;
     updateMicBtn();
     return;
   }
+
+  // Request mic permission explicitly first so user sees the prompt
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    document.getElementById('speech-input').placeholder = '⚠ Microphone access denied — check browser permissions';
+    return;
+  }
+
   recognition = initSpeech();
   if (!recognition) return;
   isRecording = true;
   updateMicBtn();
+  document.getElementById('speech-input').placeholder = '🎤 Listening...';
   recognition.start();
 }
 
