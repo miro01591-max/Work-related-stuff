@@ -84,9 +84,13 @@ function updateHeaderStats() {
 
 // ── TABS ────────────────────────────────────────────────────────────────────
 
-function switchTab(tab) {
+function openTotango() {
+  playSoundClick();
+  window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
+}
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
+  playSoundNav();
   if (tab === 'kb') renderBoard();
   if (tab === 'stats') renderStats();
 }
@@ -232,6 +236,7 @@ async function generateTP() {
   document.getElementById('result-client-label').textContent = client || '';
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Generiram...';
+  playSoundGenerate();
 
   const prompt = `Du bist ein Customer Success Manager bei PlanRadar und schreibst Touchpoint-Notizen für Totango auf Deutsch.
 
@@ -313,6 +318,7 @@ Wichtig:
 
 function copyTP() {
   if (!generatedText) return;
+  playSoundCopy();
   navigator.clipboard.writeText(generatedText).then(() => {
     showFeedback('Kopirano! Zalijepi u Totango.', false);
   }).catch(() => {
@@ -508,10 +514,14 @@ function openAdd(colId) {
   ['new-title', 'new-client', 'new-note'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('new-due').value = '';
   document.getElementById('add-modal').classList.add('open');
+  playSoundOpen();
   setTimeout(() => document.getElementById('new-title').focus(), 50);
 }
 
-function closeAdd() { document.getElementById('add-modal').classList.remove('open'); }
+function closeAdd() {
+  document.getElementById('add-modal').classList.remove('open');
+  playSoundClose();
+}
 
 function saveNew() {
   const title = document.getElementById('new-title').value.trim();
@@ -557,10 +567,14 @@ function openDetail(id) {
   });
 
   document.getElementById('det-modal').classList.add('open');
+  playSoundOpen();
   setTimeout(() => document.getElementById('det-title').focus(), 50);
 }
 
-function closeDetail() { document.getElementById('det-modal').classList.remove('open'); }
+function closeDetail() {
+  document.getElementById('det-modal').classList.remove('open');
+  playSoundClose();
+}
 
 function saveDetail() {
   const t = tasks.find(x => x.id === detailId);
@@ -590,6 +604,7 @@ function deleteTask() {
   saveTasks();
   closeDetail();
   renderBoard();
+  playSoundDelete();
 }
 
 // ── KEYBOARD / CLICK OUTSIDE ─────────────────────────────────────────────────
@@ -835,6 +850,7 @@ async function toggleMic() {
     recognition?.stop();
     isRecording = false;
     updateMicBtn();
+    playSoundMicOff();
     return;
   }
 
@@ -842,6 +858,7 @@ async function toggleMic() {
   if (!recognition) return;
   isRecording = true;
   updateMicBtn();
+  playSoundMicOn();
   document.getElementById('speech-input').placeholder = '🎤 Listening...';
 
   try {
@@ -951,47 +968,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ── SOUND & CELEBRATION ──────────────────────────────────────────────────────
+// ── 8-BIT SOUND SYSTEM ───────────────────────────────────────────────────────
 
-function playAddSound() {
+function play8bit(freqs, durations, vol = 0.12) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const t = ctx.currentTime;
-    // Short upbeat "pop" — two quick notes
-    [523, 659].forEach((freq, i) => {
+    let offset = 0;
+    freqs.forEach((freq, i) => {
+      const dur = durations[i] || 0.08;
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t + i * 0.1);
-      gain.gain.setValueAtTime(0.18, t + i * 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.18);
-      osc.start(t + i * 0.1);
-      osc.stop(t + i * 0.1 + 0.2);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, t + offset);
+      gain.gain.setValueAtTime(vol, t + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + offset + dur);
+      osc.start(t + offset);
+      osc.stop(t + offset + dur + 0.02);
+      offset += dur;
     });
   } catch(e) {}
 }
 
-function playDoneSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const t = ctx.currentTime;
-    // Cheerful ascending 3-note fanfare
-    [523, 659, 784].forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t + i * 0.12);
-      gain.gain.setValueAtTime(0.2, t + i * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
-      osc.start(t + i * 0.12);
-      osc.stop(t + i * 0.12 + 0.3);
-    });
-  } catch(e) {}
-}
+// Click — short blip
+function playSoundClick()  { play8bit([440], [0.06], 0.08); }
+// Tab switch — two-note up
+function playSoundNav()    { play8bit([330, 440], [0.06, 0.08], 0.08); }
+// Open modal — quick chord rise
+function playSoundOpen()   { play8bit([262, 330, 392], [0.05, 0.05, 0.08], 0.1); }
+// Close/cancel — down blip
+function playSoundClose()  { play8bit([330, 220], [0.06, 0.08], 0.08); }
+// Add task — upbeat pop
+function playAddSound()    { play8bit([523, 659, 784], [0.07, 0.07, 0.1], 0.12); }
+// Delete — descending blip
+function playSoundDelete()  { play8bit([440, 330, 220, 165], [0.05, 0.05, 0.05, 0.1], 0.1); }
+// Copy — camera shutter click
+function playSoundCopy()   { play8bit([880, 440], [0.04, 0.06], 0.08); }
+// Generate — loading beeps
+function playSoundGenerate(){ play8bit([262, 294, 330, 349], [0.07, 0.07, 0.07, 0.07], 0.08); }
+// Done/celebrate — fanfare
+function playDoneSound()   { play8bit([523, 659, 784, 1047], [0.08, 0.08, 0.08, 0.18], 0.15); }
+// Error — descending sad
+function playSoundError()  { play8bit([330, 262, 196], [0.1, 0.1, 0.15], 0.12); }
+// Mic on — blip up
+function playSoundMicOn()  { play8bit([440, 880], [0.05, 0.08], 0.1); }
+// Mic off — blip down
+function playSoundMicOff() { play8bit([880, 440], [0.05, 0.08], 0.1); }
 
 function launchConfetti() {
   const canvas = document.createElement('canvas');
@@ -1080,6 +1104,7 @@ function runAway(e) {
 }
 
 function closeWelcome() {
+  playSoundNav();
   const el = document.getElementById('welcome-modal');
   el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
   el.style.opacity = '0';

@@ -127,6 +127,8 @@ body {
 .nav-tp:not(.active):hover { background: rgba(99,102,241,0.15); color: #a5b4fc; }
 .nav-board:not(.active):hover { background: rgba(37,99,235,0.15); color: #93c5fd; }
 .nav-stats:not(.active):hover { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+.nav-totango { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
+.nav-totango:hover { background: rgba(20,184,166,0.2); color: #5eead4; border-color: rgba(20,184,166,0.4); }
 
 .nav-badge {
   position: absolute;
