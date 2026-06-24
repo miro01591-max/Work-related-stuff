@@ -16,19 +16,30 @@
       <div class="topbar-right">
         <span class="stat-pill">Open: <strong id="hdr-open">0</strong></span>
         <span class="stat-pill overdue-pill">Overdue: <strong id="hdr-over">0</strong></span>
-        <button class="btn btn-primary" id="btn-new-tp" onclick="switchTab('tp')">
-          <i class="ti ti-plus"></i> New touchpoint
-        </button>
+        <div class="topbar-nav">
+          <button class="topbar-tab active" data-tab="tp" onclick="switchTab('tp')">
+            <i class="ti ti-file-text"></i> New touchpoint
+          </button>
+          <button class="topbar-tab" data-tab="kb" onclick="switchTab('kb')">
+            <i class="ti ti-layout-kanban"></i> Board
+            <span class="badge" id="kb-badge" style="display:none"></span>
+          </button>
+          <button class="topbar-tab" data-tab="stats" onclick="switchTab('stats')">
+            <i class="ti ti-chart-pie"></i> Stats
+          </button>
+        </div>
       </div>
     </header>
 
-    <nav class="tabs">
+    <nav class="tabs" style="display:none">
       <button class="tab active" data-tab="tp" onclick="switchTab('tp')">
         <i class="ti ti-file-text"></i> Novi touchpoint
       </button>
       <button class="tab" data-tab="kb" onclick="switchTab('kb')">
         <i class="ti ti-layout-kanban"></i> Board
-        <span class="badge" id="kb-badge" style="display:none"></span>
+      </button>
+      <button class="tab" data-tab="stats" onclick="switchTab('stats')">
+        <i class="ti ti-chart-pie"></i> Stats
       </button>
     </nav>
 
@@ -154,6 +165,30 @@
           <button class="speech-add-btn" onclick="speechAddTask()">
             <i class="ti ti-circle-plus"></i> Add
           </button>
+        </div>
+      </div>
+
+      <!-- STATS TAB -->
+      <div class="view" id="view-stats">
+        <div class="stats-wrap">
+          <div class="stats-card card">
+            <h2 class="section-title">Task completion</h2>
+            <div class="chart-wrap">
+              <canvas id="pie-chart" width="220" height="220"></canvas>
+              <div class="chart-legend" id="chart-legend"></div>
+            </div>
+          </div>
+          <div class="stats-card card">
+            <h2 class="section-title">By category</h2>
+            <div class="chart-wrap">
+              <canvas id="bar-chart" width="220" height="220"></canvas>
+              <div class="chart-legend" id="bar-legend"></div>
+            </div>
+          </div>
+          <div class="stats-summary card">
+            <h2 class="section-title">Summary</h2>
+            <div class="summary-grid" id="summary-grid"></div>
+          </div>
         </div>
       </div>
 
