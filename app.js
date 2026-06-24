@@ -373,6 +373,7 @@ function addToBoard() {
   saveTasks();
   updateHeaderStats();
   showFeedback('Added to board!', true);
+  playAddSound();
 }
 
 function showFeedback(msg, success) {
@@ -436,9 +437,14 @@ function renderBoard() {
       if (dragId === null) return;
       const t = tasks.find(x => x.id === dragId);
       if (t && t.status !== col.id) {
+        const prevStatus = t.status;
         t.status = col.id;
         saveTasks();
         renderBoard();
+        if (col.id === 'done' && prevStatus !== 'done') {
+          playDoneSound();
+          launchConfetti();
+        }
       }
       dragId = null;
     });
@@ -522,7 +528,7 @@ function saveNew() {
   saveTasks();
   closeAdd();
   renderBoard();
-}
+  playAddSound();
 
 // ── DETAIL MODAL ─────────────────────────────────────────────────────────────
 
@@ -558,6 +564,7 @@ function closeDetail() { document.getElementById('det-modal').classList.remove('
 function saveDetail() {
   const t = tasks.find(x => x.id === detailId);
   if (!t) return;
+  const prevStatus = t.status;
   const active = document.querySelector('#det-status-row .sbtn.active');
   if (active) {
     const idx = [...document.querySelectorAll('#det-status-row .sbtn')].indexOf(active);
@@ -571,6 +578,10 @@ function saveDetail() {
   saveTasks();
   closeDetail();
   renderBoard();
+  if (t.status === 'done' && prevStatus !== 'done') {
+    playDoneSound();
+    launchConfetti();
+  }
 }
 
 function deleteTask() {
@@ -918,6 +929,7 @@ Rules:
     saveTasks();
     renderBoard();
     updateHeaderStats();
+    playAddSound();
 
     input.placeholder = `✓ "${parsed.title}" added!`;
     setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
@@ -938,10 +950,128 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ── WELCOME MODAL ─────────────────────────────────────────────────────────────
+// ── SOUND & CELEBRATION ──────────────────────────────────────────────────────
+
+function playAddSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    // Short upbeat "pop" — two quick notes
+    [523, 659].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.1);
+      gain.gain.setValueAtTime(0.18, t + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.18);
+      osc.start(t + i * 0.1);
+      osc.stop(t + i * 0.1 + 0.2);
+    });
+  } catch(e) {}
+}
+
+function playDoneSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    // Cheerful ascending 3-note fanfare
+    [523, 659, 784].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.12);
+      gain.gain.setValueAtTime(0.2, t + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.25);
+      osc.start(t + i * 0.12);
+      osc.stop(t + i * 0.12 + 0.3);
+    });
+  } catch(e) {}
+}
+
+function launchConfetti() {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const colors = ['#6366f1','#8b5cf6','#10b981','#f59e0b','#ef4444','#3b82f6','#ec4899'];
+  const pieces = Array.from({length: 80}, () => ({
+    x:     Math.random() * canvas.width,
+    y:     -10 - Math.random() * 100,
+    r:     4 + Math.random() * 5,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    vx:    (Math.random() - 0.5) * 4,
+    vy:    3 + Math.random() * 4,
+    angle: Math.random() * Math.PI * 2,
+    spin:  (Math.random() - 0.5) * 0.2,
+    shape: Math.random() > 0.5 ? 'rect' : 'circle'
+  }));
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.12;
+      p.angle += p.spin;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = Math.max(0, 1 - frame / 90);
+      if (p.shape === 'rect') {
+        ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 100) requestAnimationFrame(draw);
+    else canvas.remove();
+  }
+  draw();
+}
+
+let runCount = 0;
+
+function runAway(e) {
+  runCount++;
+  if (runCount > 5) { runCount = 0; return; }
+  const wrap = document.getElementById('btn-wrap');
+  const btn  = document.getElementById('go-btn');
+  const rect = wrap.getBoundingClientRect();
+  const maxX = rect.width  - btn.offsetWidth;
+  const maxY = rect.height - btn.offsetHeight;
+  let nx, ny, attempts = 0;
+  do {
+    nx = Math.random() * maxX;
+    ny = Math.random() * maxY;
+    attempts++;
+  } while (attempts < 20 &&
+    Math.abs(nx - (e.clientX - rect.left)) < 90 &&
+    Math.abs(ny - (e.clientY - rect.top))  < 40);
+  btn.style.transition = 'left 0.15s ease, top 0.15s ease, transform 0.15s ease';
+  btn.style.left      = nx + 'px';
+  btn.style.top       = ny + 'px';
+  btn.style.transform = `rotate(${(Math.random()-0.5)*12}deg)`;
+}
 
 function closeWelcome() {
-  document.getElementById('welcome-modal').classList.remove('open');
+  const el = document.getElementById('welcome-modal');
+  el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  el.style.opacity = '0';
+  el.style.transform = 'scale(1.03)';
+  setTimeout(() => { el.style.display = 'none'; }, 400);
 }
 
 function initWelcome() {

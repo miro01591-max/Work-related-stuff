@@ -306,15 +306,17 @@
   </div>
 
   <!-- WELCOME MODAL -->
-  <div class="modal-bg open" id="welcome-modal">
-    <div class="modal welcome-modal">
+  <div id="welcome-modal">
+    <div class="welcome-modal">
       <div class="welcome-emoji">👋</div>
       <h2 class="welcome-title">Welcome, Ilija!</h2>
       <p class="welcome-sub">Time to work!!!</p>
       <div class="welcome-stats" id="welcome-stats"></div>
-      <button class="btn btn-primary btn-full" onclick="closeWelcome()">
-        <i class="ti ti-arrow-right"></i> Let's go
-      </button>
+      <div class="welcome-btn-wrap" id="btn-wrap">
+        <button class="welcome-go-btn" id="go-btn" onmouseenter="runAway(event)" onclick="closeWelcome()">
+          <i class="ti ti-arrow-right"></i> Let's go
+        </button>
+      </div>
     </div>
   </div>
 
