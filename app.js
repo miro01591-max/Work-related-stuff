@@ -85,9 +85,10 @@ function updateHeaderStats() {
 // ── TABS ────────────────────────────────────────────────────────────────────
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.topbar-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
   if (tab === 'kb') renderBoard();
+  if (tab === 'stats') renderStats();
 }
 
 // ── TOUCHPOINT GENERATOR ────────────────────────────────────────────────────
@@ -530,10 +531,10 @@ function openDetail(id) {
   const t = tasks.find(x => x.id === id);
   if (!t) return;
 
-  document.getElementById('det-title').textContent  = t.title;
-  document.getElementById('det-client').textContent = t.client || '';
-  document.getElementById('det-note').value         = t.note || '';
-  document.getElementById('det-due').value          = t.due  || '';
+  document.getElementById('det-title').value        = t.title;
+  document.getElementById('det-client-input').value = t.client || '';
+  document.getElementById('det-note').value         = t.note  || '';
+  document.getElementById('det-due').value          = t.due   || '';
 
   const row = document.getElementById('det-status-row');
   row.innerHTML = '';
@@ -549,6 +550,7 @@ function openDetail(id) {
   });
 
   document.getElementById('det-modal').classList.add('open');
+  setTimeout(() => document.getElementById('det-title').focus(), 50);
 }
 
 function closeDetail() { document.getElementById('det-modal').classList.remove('open'); }
@@ -561,8 +563,11 @@ function saveDetail() {
     const idx = [...document.querySelectorAll('#det-status-row .sbtn')].indexOf(active);
     t.status = COLS[idx].id;
   }
-  t.note = document.getElementById('det-note').value;
-  t.due  = document.getElementById('det-due').value;
+  const newTitle = document.getElementById('det-title').value.trim();
+  if (newTitle) t.title = newTitle;
+  t.client = document.getElementById('det-client-input').value.trim();
+  t.note   = document.getElementById('det-note').value;
+  t.due    = document.getElementById('det-due').value;
   saveTasks();
   closeDetail();
   renderBoard();
@@ -596,6 +601,134 @@ document.addEventListener('keydown', e => {
 // Enter to submit forms
 document.getElementById('new-title').addEventListener('keydown', e => { if (e.key === 'Enter') saveNew(); });
 document.getElementById('apikey-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveApiKey(); });
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+
+function renderStats() {
+  const done    = tasks.filter(t => t.status === 'done').length;
+  const open    = tasks.filter(t => t.status !== 'done').length;
+  const overdue = tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date(today())).length;
+  const total   = tasks.length;
+
+  // ── PIE: done vs open ──────────────────────────────────────────────
+  const pieCanvas = document.getElementById('pie-chart');
+  const pieCtx    = pieCanvas.getContext('2d');
+  const pieData   = [
+    { label: 'Done',     value: done, color: '#16A34A' },
+    { label: 'In Progress / Waiting', value: tasks.filter(t => t.status === 'inprogress' || t.status === 'waiting').length, color: '#2563EB' },
+    { label: 'To Do',    value: tasks.filter(t => t.status === 'todo').length, color: '#7C3AED' },
+    { label: 'Special Care', value: tasks.filter(t => t.status === 'specialcare').length, color: '#E11D48' },
+  ].filter(d => d.value > 0);
+
+  drawPie(pieCtx, pieCanvas.width, pieData);
+  renderLegend('chart-legend', pieData);
+
+  // ── BAR: by category ───────────────────────────────────────────────
+  const cats = ['Support', 'Bug', 'Feature', 'Billing', 'Follow-up'];
+  const catColors = { Support: '#2563EB', Bug: '#DC2626', Feature: '#16A34A', Billing: '#D97706', 'Follow-up': '#7C3AED' };
+  const barData = cats.map(c => ({
+    label: c,
+    value: tasks.filter(t => t.tag === c).length,
+    color: catColors[c]
+  })).filter(d => d.value > 0);
+
+  const barCanvas = document.getElementById('bar-chart');
+  const barCtx    = barCanvas.getContext('2d');
+  if (barData.length) {
+    drawPie(barCtx, barCanvas.width, barData);
+    renderLegend('bar-legend', barData);
+  } else {
+    barCtx.clearRect(0, 0, barCanvas.width, barCanvas.height);
+    document.getElementById('bar-legend').innerHTML = '<span style="font-size:13px;color:var(--color-text-tertiary)">No tasks yet</span>';
+  }
+
+  // ── SUMMARY ────────────────────────────────────────────────────────
+  const grid = document.getElementById('summary-grid');
+  const pct  = total ? Math.round((done / total) * 100) : 0;
+  grid.innerHTML = `
+    <div class="summary-item highlight">
+      <div class="summary-num">${done}</div>
+      <div class="summary-lbl">Completed</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num">${open}</div>
+      <div class="summary-lbl">Open</div>
+    </div>
+    <div class="summary-item ${overdue > 0 ? 'warn' : ''}">
+      <div class="summary-num">${overdue}</div>
+      <div class="summary-lbl">Overdue</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-num">${total}</div>
+      <div class="summary-lbl">Total</div>
+    </div>
+    <div class="summary-item ${pct >= 70 ? 'highlight' : pct >= 40 ? '' : 'warn'}">
+      <div class="summary-num">${pct}%</div>
+      <div class="summary-lbl">Completion rate</div>
+    </div>
+  `;
+}
+
+function drawPie(ctx, size, data) {
+  const cx = size / 2, cy = size / 2, r = size / 2 - 10;
+  const total = data.reduce((s, d) => s + d.value, 0);
+  ctx.clearRect(0, 0, size, size);
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fill();
+    return;
+  }
+
+  let start = -Math.PI / 2;
+  data.forEach(d => {
+    const slice = (d.value / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, start + slice);
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    // white gap between slices
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    start += slice;
+  });
+
+  // donut hole
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.52, 0, Math.PI * 2);
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-background-primary') || '#ffffff';
+  ctx.fill();
+
+  // center text
+  const done = data.find(d => d.label === 'Done');
+  if (done) {
+    const pct = Math.round((done.value / total) * 100);
+    ctx.fillStyle = '#16A34A';
+    ctx.font = `bold ${size * 0.13}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${pct}%`, cx, cy - 8);
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = `${size * 0.07}px -apple-system, sans-serif`;
+    ctx.fillText('done', cx, cy + 12);
+  }
+}
+
+function renderLegend(containerId, data) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  document.getElementById(containerId).innerHTML = data.map(d => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${d.color}"></div>
+      <span class="legend-label">${d.label}</span>
+      <span class="legend-val">${d.value} <span style="font-weight:400;color:var(--text-3)">(${Math.round(d.value/total*100)}%)</span></span>
+    </div>
+  `).join('');
+}
 
 // ── SPEECH TO TEXT ──────────────────────────────────────────────────────────
 
@@ -637,7 +770,11 @@ function initSpeech() {
     console.log('[Speech] Ended');
     isRecording = false;
     updateMicBtn();
-    if (!document.getElementById('speech-input').value) {
+    const val = document.getElementById('speech-input').value.trim();
+    if (val) {
+      // Auto-submit to Claude after a short delay
+      setTimeout(() => speechAddTask(), 400);
+    } else {
       document.getElementById('speech-input').placeholder = 'Type or speak a task...';
     }
   };
@@ -704,36 +841,94 @@ async function toggleMic() {
   }
 }
 
-function speechAddTask() {
+async function speechAddTask() {
   const input = document.getElementById('speech-input');
   const text  = input.value.trim();
   if (!text) { input.focus(); return; }
 
-  const colId = document.getElementById('speech-col').value;
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('apikey-modal').classList.add('open');
+    setTimeout(() => document.getElementById('apikey-input').focus(), 100);
+    return;
+  }
 
-  // Try to auto-detect client from "with [Client]" or "for [Client]" pattern
-  let title  = text;
-  let client = '';
-  const clientMatch = text.match(/(?:with|for|about|from)\s+([A-Z][a-zA-Z\s]+?)(?:\s+(?:about|regarding|re:|on|-)|\.|$)/);
-  if (clientMatch) client = clientMatch[1].trim();
-
-  // Auto-detect tag from keywords
-  let tag = 'Follow-up';
-  const lower = text.toLowerCase();
-  if (lower.includes('bug') || lower.includes('error') || lower.includes('broken') || lower.includes('crash')) tag = 'Bug';
-  else if (lower.includes('feature') || lower.includes('request') || lower.includes('enhancement')) tag = 'Feature';
-  else if (lower.includes('invoice') || lower.includes('billing') || lower.includes('payment') || lower.includes('charge')) tag = 'Billing';
-  else if (lower.includes('support') || lower.includes('issue') || lower.includes('problem') || lower.includes('ticket')) tag = 'Support';
-
-  tasks.push({ id: nextId++, title, client, tag, status: colId, due: '', note: '' });
-  saveTasks();
-  renderBoard();
-  updateHeaderStats();
-
-  // Clear and show confirmation
+  const addBtn = document.querySelector('.speech-add-btn');
+  addBtn.disabled = true;
+  addBtn.innerHTML = '<i class="ti ti-loader"></i> Thinking...';
+  input.placeholder = '⏳ Claude is parsing your task...';
   input.value = '';
-  input.placeholder = '✓ Task added!';
-  setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 2000);
+
+  const todayStr = today();
+  const prompt = `You are a Customer Success assistant. Parse the following voice input into a task.
+
+Voice input: "${text}"
+Today's date: ${todayStr}
+
+Return ONLY a valid JSON object, no markdown, no explanation:
+{
+  "title": "short task title (max 60 chars)",
+  "client": "company or client name, empty string if not mentioned",
+  "tag": "one of: Support, Bug, Feature, Billing, Follow-up",
+  "status": "one of: todo, waiting, inprogress, done, specialcare",
+  "due": "YYYY-MM-DD date if mentioned (e.g. 'Friday', 'next week', 'tomorrow'), empty string if not mentioned",
+  "note": "any additional context from the voice input"
+}
+
+Rules:
+- status is 'waiting' if they mention waiting for a response, 'specialcare' if urgent/critical/escalated, otherwise 'todo'
+- tag: Support if issue/problem/ticket, Bug if error/broken/crash, Feature if request/enhancement, Billing if invoice/payment, Follow-up for everything else
+- due: calculate from today (${todayStr}), e.g. "tomorrow" = next day, "Friday" = next Friday`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const raw  = data.content?.[0]?.text || '';
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    } catch(e) {
+      throw new Error('Could not parse response');
+    }
+
+    tasks.push({
+      id:     nextId++,
+      title:  parsed.title  || text.slice(0, 60),
+      client: parsed.client || '',
+      tag:    parsed.tag    || 'Follow-up',
+      status: parsed.status || document.getElementById('speech-col').value,
+      due:    parsed.due    || '',
+      note:   parsed.note   || ''
+    });
+    saveTasks();
+    renderBoard();
+    updateHeaderStats();
+
+    input.placeholder = `✓ "${parsed.title}" added!`;
+    setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
+
+  } catch(e) {
+    input.placeholder = '⚠ Error — try again';
+    setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
+  } finally {
+    addBtn.disabled = false;
+    addBtn.innerHTML = '<i class="ti ti-circle-plus"></i> Add';
+  }
 }
 
 // Enter key in speech input
