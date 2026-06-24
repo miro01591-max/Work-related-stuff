@@ -2,6 +2,7 @@ const COLS = [
   { id: 'todo',         label: 'To Do' },
   { id: 'waiting',      label: 'Waiting for Response' },
   { id: 'inprogress',   label: 'In Progress' },
+  { id: 'logtotango',   label: 'Log to Totango' },
   { id: 'done',         label: 'Done' },
   { id: 'specialcare',  label: 'Special Care' }
 ];
@@ -19,6 +20,7 @@ const COL_CLASSES = {
   'todo':        'col-todo',
   'waiting':     'col-waiting',
   'inprogress':  'col-inprogress',
+  'logtotango':  'col-logtotango',
   'specialcare': 'col-specialcare',
   'done':        'col-done'
 };
@@ -472,13 +474,13 @@ function addToBoard() {
     title,
     client,
     tag,
-    status: 'todo',
+    status: 'logtotango',
     due,
     note
   });
   saveTasks();
   updateHeaderStats();
-  showFeedback('Added to board!', true);
+  showFeedback('Added to board → Log to Totango!', true);
   playAddSound();
 }
 
@@ -641,6 +643,10 @@ function renderBoard() {
         if (!task) return;
         if (!task.totango) {
           task.totango = true;
+          // Auto-move to Done if coming from Log to Totango
+          if (task.status === 'logtotango') {
+            task.status = 'done';
+          }
           saveTasks();
           renderBoard();
           playDoneSound();

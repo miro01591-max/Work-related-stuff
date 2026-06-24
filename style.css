@@ -466,7 +466,7 @@ body {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   align-items: start;
   height: calc(100vh - 230px);
@@ -492,6 +492,7 @@ body {
 .col-todo       { background: #1a1630; border-top-color: #7C3AED; }
 .col-waiting    { background: #1f1a12; border-top-color: #EA580C; }
 .col-inprogress { background: #0f1828; border-top-color: #2563EB; }
+.col-logtotango { background: #0d1f1a; border-top-color: #0D9488; }
 .col-specialcare{ background: #220f14; border-top-color: #E11D48; }
 .col-done       { background: #0d1f14; border-top-color: #16A34A; }
 
@@ -506,6 +507,7 @@ body {
 .col-todo       .col-title { color: #7C3AED; }
 .col-waiting    .col-title { color: #EA580C; }
 .col-inprogress .col-title { color: #2563EB; }
+.col-logtotango .col-title { color: #0D9488; }
 .col-specialcare .col-title { color: #E11D48; }
 .col-done       .col-title { color: #16A34A; }
 
