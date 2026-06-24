@@ -33,6 +33,7 @@ let detailId = null;
 let generatedText = '';
 let pendingClient = '';
 let pendingType = '';
+let lastParsed = null;
 
 function loadTasks() {
   try {
@@ -197,14 +198,21 @@ function buildPlainText(parsed) {
 async function generateTP() {
   const transcript = getTranscriptText();
   if (!transcript) {
-    if (transcriptMode === 'paste') document.getElementById('tp-raw').focus();
+    const ta = document.getElementById('tp-raw');
+    ta.focus();
+    ta.style.borderColor = '#E11D48';
+    ta.placeholder = '⚠ Paste or type a transcript first...';
+    setTimeout(() => {
+      ta.style.borderColor = '';
+      ta.placeholder = 'Paste transcript here — Teams/Zoom summary, key points, or free description...';
+    }, 3000);
     return;
   }
 
   const apiKey = getApiKey();
   if (!apiKey) {
     document.getElementById('apikey-modal').classList.add('open');
-    document.getElementById('apikey-input').focus();
+    setTimeout(() => document.getElementById('apikey-input').focus(), 100);
     return;
   }
 
@@ -290,6 +298,7 @@ Wichtig:
     }
 
     generatedText = buildPlainText(parsed);
+    lastParsed = parsed;
     renderSections(parsed);
 
   } catch (e) {
@@ -319,11 +328,11 @@ function copyTP() {
 function addToBoard() {
   if (!generatedText) return;
 
-  // Try to extract a meaningful title from typeContext or first next step
+  // Extract title from typeContext section
   const sections = document.querySelectorAll('.tp-section-content');
   let title = '';
   sections.forEach((el, i) => {
-    if (i === 2 && !title) title = el.textContent.trim().slice(0, 65); // typeContext
+    if (i === 2 && !title) title = el.textContent.trim().slice(0, 65);
   });
   if (!title) {
     const raw = transcriptMode === 'paste' ? document.getElementById('tp-raw').value.trim() : fileContent;
@@ -331,13 +340,30 @@ function addToBoard() {
   }
   if (title.length >= 65) title = title.slice(0, 62) + '...';
 
+  // Extract company/client name from parsed customerInfo
+  // customerInfo is typically "Name, Role — Company" or "Name, Company"
+  let client = pendingClient; // use manually entered client if available
+  if (!client && lastParsed?.customerInfo) {
+    const info = lastParsed.customerInfo;
+    // Try to extract company after comma, dash, or "von"/"bei"/"from"
+    const companyMatch = info.match(/(?:,\s*|-\s*|–\s*|bei\s+|von\s+|from\s+|@\s*)([^,\-–]+)$/i);
+    if (companyMatch) {
+      client = companyMatch[1].trim();
+    } else {
+      // Just take the whole customerInfo if short enough, strip role
+      const parts = info.split(',');
+      client = parts[0].trim(); // Take first part (usually name or company)
+    }
+  }
+  if (!client) client = '';
+
   const due = document.getElementById('tp-due').value;
   const tag = pendingType === 'Check-in' ? 'Follow-up' : pendingType;
 
   tasks.push({
     id: nextId++,
     title,
-    client: pendingClient || 'Klijent',
+    client,
     tag,
     status: 'todo',
     due,
@@ -345,7 +371,7 @@ function addToBoard() {
   });
   saveTasks();
   updateHeaderStats();
-  showFeedback('Dodano u board! Prebaci se na Board tab.', true);
+  showFeedback('Added to board!', true);
 }
 
 function showFeedback(msg, success) {
@@ -362,7 +388,7 @@ function resetTP() {
   document.getElementById('tp-result-wrap').style.display = 'none';
   document.getElementById('feedback-msg').textContent     = '';
   clearFile();
-  generatedText = ''; pendingClient = ''; pendingType = '';
+  generatedText = ''; pendingClient = ''; pendingType = ''; lastParsed = null;
 }
 
 const TAG_CLASSES = {
@@ -584,17 +610,40 @@ function initSpeech() {
   r.interimResults = true;
   r.lang = 'en-US';
 
+  r.onstart = () => {
+    console.log('[Speech] Started listening');
+    document.getElementById('speech-input').placeholder = '🎤 Listening... speak now';
+  };
+
+  r.onspeechstart = () => {
+    console.log('[Speech] Speech detected');
+    document.getElementById('speech-input').placeholder = '🎤 Speech detected...';
+  };
+
   r.onresult = e => {
+    console.log('[Speech] Got result', e.results);
     const transcript = [...e.results].map(r => r[0].transcript).join('');
+    console.log('[Speech] Transcript:', transcript);
     document.getElementById('speech-input').value = transcript;
   };
 
+  r.onnomatch = () => {
+    console.log('[Speech] No match');
+    document.getElementById('speech-input').placeholder = 'No match — try speaking more clearly';
+    setTimeout(() => { document.getElementById('speech-input').placeholder = 'Type or speak a task...'; }, 3000);
+  };
+
   r.onend = () => {
+    console.log('[Speech] Ended');
     isRecording = false;
     updateMicBtn();
+    if (!document.getElementById('speech-input').value) {
+      document.getElementById('speech-input').placeholder = 'Type or speak a task...';
+    }
   };
 
   r.onerror = e => {
+    console.log('[Speech] Error:', e.error, e.message);
     isRecording = false;
     updateMicBtn();
     const input = document.getElementById('speech-input');
@@ -640,20 +689,19 @@ async function toggleMic() {
     return;
   }
 
-  // Request mic permission explicitly first so user sees the prompt
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (err) {
-    document.getElementById('speech-input').placeholder = '⚠ Microphone access denied — check browser permissions';
-    return;
-  }
-
   recognition = initSpeech();
   if (!recognition) return;
   isRecording = true;
   updateMicBtn();
   document.getElementById('speech-input').placeholder = '🎤 Listening...';
-  recognition.start();
+
+  try {
+    recognition.start();
+  } catch(e) {
+    console.log('[Speech] Start error:', e);
+    isRecording = false;
+    updateMicBtn();
+  }
 }
 
 function speechAddTask() {
