@@ -85,7 +85,7 @@ function updateHeaderStats() {
 // ── TABS ────────────────────────────────────────────────────────────────────
 
 function switchTab(tab) {
-  document.querySelectorAll('.topbar-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
   if (tab === 'kb') renderBoard();
   if (tab === 'stats') renderStats();
@@ -677,7 +677,7 @@ function drawPie(ctx, size, data) {
   if (total === 0) {
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#e5e7eb';
+    ctx.fillStyle = '#2a2a28';
     ctx.fill();
     return;
   }
@@ -701,7 +701,7 @@ function drawPie(ctx, size, data) {
   // donut hole
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.52, 0, Math.PI * 2);
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-background-primary') || '#ffffff';
+  ctx.fillStyle = '#1c1c1a';
   ctx.fill();
 
   // center text
@@ -713,7 +713,7 @@ function drawPie(ctx, size, data) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${pct}%`, cx, cy - 8);
-    ctx.fillStyle = '#9ca3af';
+    ctx.fillStyle = '#606058';
     ctx.font = `${size * 0.07}px -apple-system, sans-serif`;
     ctx.fillText('done', cx, cy + 12);
   }
