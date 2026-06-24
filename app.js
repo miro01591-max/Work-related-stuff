@@ -241,36 +241,49 @@ function renderSections(parsed) {
 }
 
 // Build plain text from editable textareas for Totango clipboard
-// Format: HEADING on own line (unicode bold), empty line, content, empty line before next
 function buildPlainText() {
   const sections = [
     { key: 'customerInfo',   label: 'Customer Information (Name, Role)' },
     { key: 'meetingDetails', label: 'Meeting Details (Duration, Objective)' },
     { key: 'typeContext',    label: 'Type of Request and Context' },
-    { key: 'valueReal',      label: 'Value Realisation' },
+    { key: 'valueReal',      label: 'Value Realisation (value received from this touchpoint)' },
     { key: 'nextSteps',      label: 'Next Steps' },
   ];
-
-  // Convert text to unicode bold characters (renders as bold in Totango rich text)
-  function toBold(str) {
-    return str.split('').map(ch => {
-      const code = ch.codePointAt(0);
-      if (code >= 65 && code <= 90)  return String.fromCodePoint(code - 65 + 0x1D400); // A-Z
-      if (code >= 97 && code <= 122) return String.fromCodePoint(code - 97 + 0x1D41A); // a-z
-      if (code >= 48 && code <= 57)  return String.fromCodePoint(code - 48 + 0x1D7CE); // 0-9
-      return ch;
-    }).join('');
-  }
 
   const parts = [];
   document.querySelectorAll('.tp-section-textarea').forEach(ta => {
     const key = ta.dataset.key;
     const sec = sections.find(s => s.key === key);
     if (sec && ta.value.trim()) {
-      parts.push(`${toBold(sec.label)}\n${ta.value.trim()}`);
+      parts.push(`${sec.label}: ${ta.value.trim()}`);
     }
   });
   return parts.join('\n\n');
+}
+
+// Build HTML for rich text clipboard (bold headings, Totango supports it)
+function buildHtmlText() {
+  const sections = [
+    { key: 'customerInfo',   label: 'Customer Information (Name, Role)' },
+    { key: 'meetingDetails', label: 'Meeting Details (Duration, Objective)' },
+    { key: 'typeContext',    label: 'Type of Request and Context' },
+    { key: 'valueReal',      label: 'Value Realisation (value received from this touchpoint)' },
+    { key: 'nextSteps',      label: 'Next Steps' },
+  ];
+
+  const parts = [];
+  document.querySelectorAll('.tp-section-textarea').forEach(ta => {
+    const key = ta.dataset.key;
+    const sec = sections.find(s => s.key === key);
+    if (sec && ta.value.trim()) {
+      // Convert newlines to <br>, preserve bullet points
+      const content = ta.value.trim()
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g, '<br>');
+      parts.push(`<p><strong>${sec.label}:</strong> ${content}</p>`);
+    }
+  });
+  return parts.join('\n');
 }
 
 async function generateTP() {
@@ -393,19 +406,29 @@ Wichtig:
 
 function copyTP() {
   if (!generatedText) return;
-  const text = buildPlainText();
   playSoundCopy();
-  navigator.clipboard.writeText(text).then(() => {
-    showFeedback('Kopirano! Zalijepi u Totango.', false);
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = generatedText;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showFeedback('Kopirano! Zalijepi u Totango.', false);
-  });
+  const html = buildHtmlText();
+  const plain = buildPlainText();
+
+  // Try rich text copy first (works in Chrome)
+  if (window.ClipboardItem) {
+    const item = new ClipboardItem({
+      'text/html':  new Blob([html],  { type: 'text/html' }),
+      'text/plain': new Blob([plain], { type: 'text/plain' }),
+    });
+    navigator.clipboard.write([item]).then(() => {
+      showFeedback('Copied! Paste into Totango — headings will be bold.', false);
+    }).catch(() => {
+      // Fallback to plain text
+      navigator.clipboard.writeText(plain).then(() => {
+        showFeedback('Copied as plain text.', false);
+      });
+    });
+  } else {
+    navigator.clipboard.writeText(plain).then(() => {
+      showFeedback('Copied! Paste into Totango.', false);
+    });
+  }
 }
 
 function addToBoard() {
