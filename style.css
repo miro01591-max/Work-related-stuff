@@ -598,13 +598,13 @@ body {
 
 .kanban-card:active { transform: scale(0.99); }
 
-/* Card left border + subtle bg tint by tag */
-.card-support   { border-left-color: #2563EB; background: #0e1a2e; }
-.card-bug       { border-left-color: #DC2626; background: #1e0e0e; }
-.card-feature   { border-left-color: #16A34A; background: #0d1e12; }
-.card-billing   { border-left-color: #D97706; background: #1e1608; }
-.card-followup  { border-left-color: #7C3AED; background: #180f2e; }
-.card-checkin   { border-left-color: #0D9488; background: #0a1e1c; }
+/* Card color by column */
+.card-col-todo        { border-left-color: #7C3AED; background: #1a1035; }
+.card-col-waiting     { border-left-color: #EA580C; background: #1f1508; }
+.card-col-inprogress  { border-left-color: #2563EB; background: #0d1525; }
+.card-col-logtotango  { border-left-color: #0D9488; background: #0a1a18; }
+.card-col-done        { border-left-color: #16A34A; background: #0a1a0e; opacity: 0.75; }
+.card-col-specialcare { border-left-color: #E11D48; background: #1f0a10; }
 
 .card-client { font-size: 11px; color: var(--text-3); }
 .card-meta { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }

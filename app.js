@@ -25,6 +25,15 @@ const COL_CLASSES = {
   'done':        'col-done'
 };
 
+const COL_CARD_CLASSES = {
+  'todo':        'card-col-todo',
+  'waiting':     'card-col-waiting',
+  'inprogress':  'card-col-inprogress',
+  'logtotango':  'card-col-logtotango',
+  'done':        'card-col-done',
+  'specialcare': 'card-col-specialcare',
+};
+
 const STORAGE_KEY = 'cs_dashboard_tasks_v1';
 const API_KEY_STORAGE = 'cs_dashboard_apikey';
 
@@ -613,12 +622,12 @@ function renderBoard() {
     });
 
     colTasks.forEach(t => {
-      const dl      = dueLabel(t.due);
-      const tagCls  = TAG_CLASSES[t.tag]  || 't-support';
-      const cardCls = CARD_CLASSES[t.tag] || 'card-support';
+      const dl       = dueLabel(t.due);
+      const tagCls   = TAG_CLASSES[t.tag]     || 't-support';
+      const colCardCls = COL_CARD_CLASSES[col.id] || 'card-col-todo';
 
       const card = document.createElement('div');
-      card.className = `kanban-card ${cardCls}`;
+      card.className = `kanban-card ${colCardCls}`;
       card.draggable = true;
       card.dataset.taskId = t.id;
       card.innerHTML = `
