@@ -172,12 +172,12 @@ body {
 }
 
 /* CONTENT */
-.content { margin-left: 110px; padding: 28px; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.content { margin-left: 110px; padding: 28px; flex: 1; min-width: 0; }
 .view { display: none; }
 .view.active { display: block; }
 
 /* Touchpoint centered */
-#view-tp {
+#view-tp.active {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -704,7 +704,7 @@ body {
   border: 0.5px solid var(--border);
   border-radius: 24px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   animation: slideUp 0.35s ease;
 }
 .welcome-modal::before {
@@ -763,8 +763,10 @@ body {
 /* Runaway button container */
 .welcome-btn-wrap {
   position: relative;
-  height: 130px;
+  height: 160px;
   width: 100%;
+  margin: 0 -40px;
+  padding: 0 40px;
 }
 .welcome-go-btn {
   padding: 14px 36px;

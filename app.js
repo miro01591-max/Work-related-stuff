@@ -529,6 +529,7 @@ function saveNew() {
   closeAdd();
   renderBoard();
   playAddSound();
+}
 
 // ── DETAIL MODAL ─────────────────────────────────────────────────────────────
 
@@ -1046,24 +1047,36 @@ let runCount = 0;
 
 function runAway(e) {
   runCount++;
-  if (runCount > 5) { runCount = 0; return; }
-  const wrap = document.getElementById('btn-wrap');
   const btn  = document.getElementById('go-btn');
-  const rect = wrap.getBoundingClientRect();
-  const maxX = rect.width  - btn.offsetWidth;
-  const maxY = rect.height - btn.offsetHeight;
-  let nx, ny, attempts = 0;
+  const wrap = document.getElementById('btn-wrap');
+  const wr   = wrap.getBoundingClientRect();
+  const bw   = btn.offsetWidth;
+  const bh   = btn.offsetHeight;
+
+  if (runCount > 5) {
+    btn.style.left      = '50%';
+    btn.style.top       = '50%';
+    btn.style.transform = 'translate(-50%, -50%)';
+    btn.title = 'ok fine 😅';
+    runCount = 0;
+    return;
+  }
+
+  const cx = e.clientX - wr.left;
+  const cy = e.clientY - wr.top;
+  const maxX = wr.width  - bw;
+  const maxY = wr.height - bh;
+
+  let nx, ny, tries = 0;
   do {
-    nx = Math.random() * maxX;
-    ny = Math.random() * maxY;
-    attempts++;
-  } while (attempts < 20 &&
-    Math.abs(nx - (e.clientX - rect.left)) < 90 &&
-    Math.abs(ny - (e.clientY - rect.top))  < 40);
-  btn.style.transition = 'left 0.15s ease, top 0.15s ease, transform 0.15s ease';
-  btn.style.left      = nx + 'px';
-  btn.style.top       = ny + 'px';
-  btn.style.transform = `rotate(${(Math.random()-0.5)*12}deg)`;
+    nx = bw/2 + Math.random() * (wr.width  - bw);
+    ny = bh/2 + Math.random() * (wr.height - bh);
+    tries++;
+  } while (tries < 30 && Math.hypot(nx - cx, ny - cy) < 110);
+
+  btn.style.left      = (nx - bw/2) + 'px';
+  btn.style.top       = (ny - bh/2) + 'px';
+  btn.style.transform = `rotate(${(Math.random()-0.5)*14}deg)`;
 }
 
 function closeWelcome() {
