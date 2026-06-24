@@ -1092,18 +1092,19 @@ function initWelcome() {
   const overdue = tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date(today())).length;
   const done    = tasks.filter(t => t.status === 'done').length;
 
+  const statStyle = 'flex:1;background:#242422;border-radius:10px;padding:14px 10px;border:0.5px solid rgba(255,255,255,0.08);text-align:center';
   document.getElementById('welcome-stats').innerHTML = `
-    <div class="welcome-stat-item">
-      <div class="welcome-stat-num">${open}</div>
-      <div class="welcome-stat-lbl">Open</div>
+    <div style="${statStyle}">
+      <div style="font-size:26px;font-weight:700;color:#f0f0ec;line-height:1">${open}</div>
+      <div style="font-size:11px;color:#505048;margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Open</div>
     </div>
-    <div class="welcome-stat-item">
-      <div class="welcome-stat-num ${overdue > 0 ? 'warn' : ''}">${overdue}</div>
-      <div class="welcome-stat-lbl">Overdue</div>
+    <div style="${statStyle}">
+      <div style="font-size:26px;font-weight:700;color:${overdue > 0 ? '#f87171' : '#f0f0ec'};line-height:1">${overdue}</div>
+      <div style="font-size:11px;color:#505048;margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Overdue</div>
     </div>
-    <div class="welcome-stat-item">
-      <div class="welcome-stat-num good">${done}</div>
-      <div class="welcome-stat-lbl">Done</div>
+    <div style="${statStyle}">
+      <div style="font-size:26px;font-weight:700;color:#5DCAA5;line-height:1">${done}</div>
+      <div style="font-size:11px;color:#505048;margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Done</div>
     </div>
   `;
 }

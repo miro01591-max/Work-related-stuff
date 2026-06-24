@@ -306,15 +306,16 @@
   </div>
 
   <!-- WELCOME MODAL -->
-  <div id="welcome-modal">
-    <div class="welcome-modal">
-      <div class="welcome-emoji">👋</div>
-      <h2 class="welcome-title">Welcome, Ilija!</h2>
-      <p class="welcome-sub">Time to work!!!</p>
-      <div class="welcome-stats" id="welcome-stats"></div>
-      <div class="welcome-btn-wrap" id="btn-wrap">
-        <button class="welcome-go-btn" id="go-btn" onmouseenter="runAway(event)" onclick="closeWelcome()">
-          <i class="ti ti-arrow-right"></i> Let's go
+  <div id="welcome-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <div style="background:#1c1c1a;border:0.5px solid rgba(255,255,255,0.15);border-radius:24px;padding:48px 40px 40px;width:100%;max-width:420px;text-align:center;position:relative;box-shadow:0 24px 60px rgba(0,0,0,0.6)">
+      <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:280px;height:200px;background:radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 70%);pointer-events:none"></div>
+      <div style="font-size:52px;margin-bottom:16px;line-height:1">👋</div>
+      <div style="font-size:26px;font-weight:700;color:#f0f0ec;margin-bottom:8px">Welcome, Ilija!</div>
+      <div style="font-size:15px;color:#a0a09a;margin-bottom:28px">Time to work!!!</div>
+      <div style="display:flex;gap:10px;margin-bottom:32px" id="welcome-stats"></div>
+      <div id="btn-wrap" style="position:relative;height:100px;width:100%">
+        <button id="go-btn" onmouseenter="runAway(event)" onclick="closeWelcome()" style="padding:13px 32px;font-size:14px;font-weight:600;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;cursor:pointer;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);white-space:nowrap;box-shadow:0 4px 20px rgba(99,102,241,0.5);transition:left .15s ease,top .15s ease,box-shadow .15s;font-family:inherit;display:flex;align-items:center;gap:8px;font-size:15px">
+          <i class="ti ti-arrow-right" style="font-size:16px" aria-hidden="true"></i> Let's go
         </button>
       </div>
     </div>
