@@ -61,13 +61,14 @@ function saveTasks() {
 }
 
 function getSampleTasks() {
-  const today = new Date();
+  const todayDate = new Date();
   const fmt = d => d.toISOString().split('T')[0];
-  const addDays = n => { const d = new Date(today); d.setDate(d.getDate() + n); return fmt(d); };
+  const addDays = n => { const d = new Date(todayDate); d.setDate(d.getDate() + n); return fmt(d); };
+  const ts = (daysAgo) => { const d = new Date(todayDate); d.setDate(d.getDate() - daysAgo); return d.toISOString(); };
   return [
-    { id: 1, title: 'Login problem — korisnik ne može pristupiti', client: 'Acme d.o.o.', tag: 'Support', status: 'waiting', due: addDays(3), note: 'Poslao mail supportu 14.6. Ticket #4421. Pratiti do kraja tjedna.' },
-    { id: 2, title: 'Faktura nije stigla na mail', client: 'Beta Systems', tag: 'Billing', status: 'todo', due: addDays(1), note: '' },
-    { id: 3, title: 'Export PDF greška na Firefox', client: 'Gamma Tech', tag: 'Bug', status: 'inprogress', due: addDays(7), note: 'Repro: klik Export > PDF na Firefox 126. Dev tim informiran.' }
+    { id: 1, title: 'Login problem — korisnik ne može pristupiti', client: 'Acme d.o.o.', tag: 'Support', status: 'waiting', due: addDays(3), note: '', createdAt: ts(5), movedAt: ts(3) },
+    { id: 2, title: 'Faktura nije stigla na mail', client: 'Beta Systems', tag: 'Billing', status: 'todo', due: addDays(1), note: '', createdAt: ts(2), movedAt: ts(2) },
+    { id: 3, title: 'Export PDF greška na Firefox', client: 'Gamma Tech', tag: 'Bug', status: 'inprogress', due: addDays(7), note: '', createdAt: ts(8), movedAt: ts(6) }
   ];
 }
 
@@ -106,6 +107,7 @@ function switchTab(tab) {
   playSoundNav();
   if (tab === 'kb') renderBoard();
   if (tab === 'stats') renderStats();
+  if (tab === 'weekly') renderWeekly();
 }
 
 // ── TOUCHPOINT GENERATOR ────────────────────────────────────────────────────
@@ -515,7 +517,9 @@ function addToBoard() {
     tag,
     status: 'logtotango',
     due,
-    note
+    note,
+    createdAt: new Date().toISOString(),
+    movedAt:   new Date().toISOString()
   });
   saveTasks();
   updateHeaderStats();
@@ -641,6 +645,7 @@ function renderBoard() {
       if (t && t.status !== col.id) {
         const prevStatus = t.status;
         t.status = col.id;
+        t.movedAt = new Date().toISOString();
         saveTasks();
         renderBoard();
         if (col.id === 'done' && prevStatus !== 'done') {
@@ -656,6 +661,15 @@ function renderBoard() {
       const tagCls   = TAG_CLASSES[t.tag]     || 't-support';
       const colCardCls = COL_CARD_CLASSES[col.id] || 'card-col-todo';
 
+      // Time tracking — days in current column
+      const movedAt = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || Date.now());
+      const daysInCol = Math.floor((Date.now() - movedAt) / 864e5);
+      let ageCls = '', ageText = '';
+      if (t.status !== 'done' && daysInCol > 0) {
+        ageText = `${daysInCol}d`;
+        ageCls = daysInCol >= 7 ? 'old' : daysInCol >= 3 ? 'warn' : '';
+      }
+
       const card = document.createElement('div');
       card.className = `kanban-card ${colCardCls}`;
       card.draggable = true;
@@ -663,10 +677,11 @@ function renderBoard() {
       card.innerHTML = `
         <div class="card-drag-handle" aria-hidden="true"><i class="ti ti-grip-horizontal"></i></div>
         <div class="card-title">${escHtml(t.title)}</div>
-        <div class="card-client">${escHtml(t.client || '')}</div>
+        <div class="card-client card-client-link" data-client="${escHtml(t.client || '')}">${escHtml(t.client || '')}</div>
         <div class="card-meta">
           <span class="tag ${tagCls}">${t.tag}</span>
           ${dl ? `<span class="due-tag${dl.over ? ' over' : ''}">${dl.over ? '<i class="ti ti-alert-circle" style="font-size:12px;vertical-align:-1px"></i> ' : ''}${escHtml(dl.text)}</span>` : ''}
+          ${ageText ? `<span class="card-age ${ageCls}"><i class="ti ti-clock" style="font-size:10px"></i> ${ageText}</span>` : ''}
         </div>
         <div class="card-totango ${t.totango ? 'card-totango-done' : ''}" data-id="${t.id}">
           <span class="totango-check ${t.totango ? 'checked' : ''}">
@@ -674,6 +689,15 @@ function renderBoard() {
           </span>
           <span class="totango-label">${t.totango ? 'In Totango ✓' : 'Add to Totango'}</span>
         </div>`;
+
+      // Client name click → client view
+      const clientEl = card.querySelector('.card-client-link');
+      if (clientEl && t.client) {
+        clientEl.addEventListener('click', e => {
+          e.stopPropagation();
+          openClientModal(t.client);
+        });
+      }
 
       // Totango checkbox click
       card.querySelector('.card-totango').addEventListener('click', e => {
@@ -752,7 +776,9 @@ function saveNew() {
     tag:    document.getElementById('new-tag').value,
     status: addColId,
     due:    document.getElementById('new-due').value,
-    note:   document.getElementById('new-note').value.trim()
+    note:   document.getElementById('new-note').value.trim(),
+    createdAt: new Date().toISOString(),
+    movedAt:   new Date().toISOString()
   });
   saveTasks();
   closeAdd();
@@ -802,7 +828,9 @@ function saveDetail() {
   const active = document.querySelector('#det-status-row .sbtn.active');
   if (active) {
     const idx = [...document.querySelectorAll('#det-status-row .sbtn')].indexOf(active);
-    t.status = COLS[idx].id;
+    const newStatus = COLS[idx].id;
+    if (newStatus !== t.status) t.movedAt = new Date().toISOString();
+    t.status = newStatus;
   }
   const newTitle = document.getElementById('det-title').value.trim();
   if (newTitle) t.title = newTitle;
@@ -974,6 +1002,155 @@ function renderLegend(containerId, data) {
       <span class="legend-val">${d.value} <span style="font-weight:400;color:var(--text-3)">(${Math.round(d.value/total*100)}%)</span></span>
     </div>
   `).join('');
+}
+
+// ── WEEKLY VIEW ───────────────────────────────────────────────────────────────
+
+function renderWeekly() {
+  const todayStr = today();
+  const todayDate = new Date(todayStr);
+  const dayOfWeek = todayDate.getDay();
+  const monday = new Date(todayDate);
+  monday.setDate(todayDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const fmt = d => d.toISOString().split('T')[0];
+  const mondayStr = fmt(monday);
+  const sundayStr = fmt(sunday);
+
+  const weekLabel = `Week of ${monday.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} – ${sunday.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
+  document.getElementById('weekly-title').textContent = `Weekly Overview — ${weekLabel}`;
+
+  const overdue   = tasks.filter(t => t.status !== 'done' && t.due && t.due < todayStr);
+  const thisWeek  = tasks.filter(t => t.status !== 'done' && t.due && t.due >= todayStr && t.due <= sundayStr);
+  const logTotango = tasks.filter(t => t.status === 'logtotango');
+  const stuck     = tasks.filter(t => {
+    if (t.status === 'done') return false;
+    const moved = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || 0);
+    return Math.floor((Date.now() - moved) / 864e5) >= 5;
+  });
+
+  const grid = document.getElementById('weekly-grid');
+  grid.innerHTML = '';
+
+  const sections = [
+    { title: 'Overdue', icon: 'ti-alert-circle', color: '#f87171', items: overdue },
+    { title: 'Due this week', icon: 'ti-calendar-due', color: '#EF9F27', items: thisWeek },
+    { title: 'Waiting to log in Totango', icon: 'ti-external-link', color: '#0D9488', items: logTotango },
+    { title: 'Stuck (5+ days in same column)', icon: 'ti-clock', color: '#9060ee', items: stuck },
+  ];
+
+  sections.forEach(sec => {
+    const div = document.createElement('div');
+    div.className = 'weekly-section';
+    div.innerHTML = `<div class="weekly-section-title"><i class="ti ${sec.icon}" style="color:${sec.color}" aria-hidden="true"></i>${sec.title} <span style="color:${sec.color};font-weight:700">${sec.items.length}</span></div>`;
+
+    if (sec.items.length === 0) {
+      div.innerHTML += `<div class="weekly-empty">All clear ✓</div>`;
+    } else {
+      // Group by client
+      const byClient = {};
+      sec.items.forEach(t => {
+        const c = t.client || 'No client';
+        if (!byClient[c]) byClient[c] = [];
+        byClient[c].push(t);
+      });
+      Object.entries(byClient).forEach(([client, clientTasks]) => {
+        const g = document.createElement('div');
+        g.className = 'weekly-client-group';
+        g.innerHTML = `<div class="weekly-client-name">${escHtml(client)}</div>`;
+        clientTasks.forEach(t => {
+          const dl = dueLabel(t.due);
+          const row = document.createElement('div');
+          row.className = 'weekly-task-row';
+          row.innerHTML = `
+            <span class="tag ${TAG_CLASSES[t.tag] || 't-support'}">${t.tag}</span>
+            <span style="flex:1;font-size:12px;color:var(--text-2)">${escHtml(t.title.slice(0, 60))}${t.title.length > 60 ? '...' : ''}</span>
+            ${dl ? `<span class="weekly-due${dl.over ? ' over' : ''}">${dl.text}</span>` : ''}
+          `;
+          row.onclick = () => openDetail(t.id);
+          g.appendChild(row);
+        });
+        div.appendChild(g);
+      });
+    }
+    grid.appendChild(div);
+  });
+}
+
+// ── CLIENT VIEW ───────────────────────────────────────────────────────────────
+
+function openClientModal(clientName) {
+  const clientTasks = tasks.filter(t => t.client === clientName && t.status !== 'done');
+  const doneTasks   = tasks.filter(t => t.client === clientName && t.status === 'done');
+
+  document.getElementById('client-modal-name').textContent = clientName;
+
+  const colBadge = {
+    todo: 'col-badge-todo', waiting: 'col-badge-waiting',
+    inprogress: 'col-badge-inprogress', logtotango: 'col-badge-logtotango',
+    done: 'col-badge-done', specialcare: 'col-badge-specialcare'
+  };
+  const colLabel = {
+    todo: 'To Do', waiting: 'Waiting', inprogress: 'In Progress',
+    logtotango: 'Log to Totango', done: 'Done', specialcare: 'Special Care'
+  };
+
+  const renderTaskList = (list) => list.map(t => `
+    <div class="client-task-item" onclick="closeClientModal();openDetail(${t.id})">
+      <span class="tag ${TAG_CLASSES[t.tag] || 't-support'}">${t.tag}</span>
+      <span class="client-task-title">${escHtml(t.title)}</span>
+      <span class="client-col-badge ${colBadge[t.status] || ''}">${colLabel[t.status] || t.status}</span>
+    </div>`).join('');
+
+  document.getElementById('client-modal-tasks').innerHTML = `
+    ${clientTasks.length ? `<div style="font-size:12px;color:var(--text-3);margin-bottom:8px;font-weight:600">OPEN (${clientTasks.length})</div>${renderTaskList(clientTasks)}` : '<div style="font-size:13px;color:var(--text-3);padding:8px 0">No open tasks ✓</div>'}
+    ${doneTasks.length ? `<div style="font-size:12px;color:var(--text-3);margin:14px 0 8px;font-weight:600">DONE (${doneTasks.length})</div>${renderTaskList(doneTasks)}` : ''}
+  `;
+
+  document.getElementById('client-modal').classList.add('open');
+  playSoundOpen();
+}
+
+function closeClientModal() {
+  document.getElementById('client-modal').classList.remove('open');
+  playSoundClose();
+}
+
+// ── BROWSER NOTIFICATIONS ────────────────────────────────────────────────────
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function checkDueNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const todayStr = today();
+  const dueTodayOrOver = tasks.filter(t =>
+    t.status !== 'done' && t.due && t.due <= todayStr
+  );
+  if (dueTodayOrOver.length > 0) {
+    new Notification('CS Dashboard', {
+      body: `${dueTodayOrOver.length} task${dueTodayOrOver.length > 1 ? 's' : ''} due today or overdue!`,
+      icon: 'https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons/layout-kanban.svg'
+    });
+  }
+}
+
+function scheduleMorningNotification() {
+  requestNotificationPermission();
+  const now = new Date();
+  const next9am = new Date(now);
+  next9am.setHours(9, 0, 0, 0);
+  if (now >= next9am) next9am.setDate(next9am.getDate() + 1);
+  const msUntil9am = next9am - now;
+  setTimeout(() => {
+    checkDueNotifications();
+    setInterval(checkDueNotifications, 24 * 60 * 60 * 1000);
+  }, msUntil9am);
 }
 
 // ── TOKEN TRACKER ────────────────────────────────────────────────────────────
@@ -1567,3 +1744,8 @@ loadTasks();
 updateHeaderStats();
 loadAvatar();
 initWelcome();
+scheduleMorningNotification();
+
+document.getElementById('client-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeClientModal();
+});

@@ -36,6 +36,10 @@
           <span>Board</span>
           <span class="nav-badge" id="kb-badge" style="display:none"></span>
         </button>
+        <button class="nav-btn nav-weekly" data-tab="weekly" onclick="switchTab('weekly')">
+          <i class="ti ti-calendar-week"></i>
+          <span>Weekly</span>
+        </button>
         <button class="nav-btn nav-stats" data-tab="stats" onclick="switchTab('stats')">
           <i class="ti ti-chart-pie"></i>
           <span>Stats</span>
@@ -54,6 +58,14 @@
         <div class="sidebar-stat warn">
           <div class="sidebar-stat-num" id="hdr-over">0</div>
           <div class="sidebar-stat-lbl">Overdue</div>
+        </div>
+        <div class="sidebar-stat token-stat">
+          <div class="token-display" id="token-display">
+            <span style="color:#5DCAA5;font-weight:600">0</span>
+            <span style="color:rgba(255,255,255,0.3);font-size:10px">tokens</span>
+            <span style="color:#5DCAA5;font-size:10px">~$0.000</span>
+          </div>
+          <div class="sidebar-stat-lbl">Session API</div>
         </div>
       </div>
     </aside>
@@ -215,7 +227,29 @@
         </div>
       </div>
 
+      <!-- WEEKLY VIEW -->
+      <div class="view" id="view-weekly">
+        <div class="weekly-wrap">
+          <div class="weekly-header">
+            <h2 class="section-title" id="weekly-title">Weekly Overview</h2>
+            <button class="btn btn-sm" onclick="renderWeekly()"><i class="ti ti-refresh"></i> Refresh</button>
+          </div>
+          <div class="weekly-grid" id="weekly-grid"></div>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- CLIENT VIEW MODAL -->
+  <div class="modal-bg" id="client-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3 id="client-modal-name"></h3>
+        <button class="icon-btn" onclick="closeClientModal()" aria-label="Close"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="client-modal-tasks"></div>
+    </div>
   </div>
 
   <!-- DETAIL MODAL -->

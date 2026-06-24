@@ -159,6 +159,15 @@ body {
   text-align: center;
 }
 .sidebar-stat.warn .sidebar-stat-num { color: #f87171; }
+.token-stat { background: rgba(255,255,255,0.04); }
+.token-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.3;
+  font-family: -apple-system, monospace;
+}
 .sidebar-stat-num {
   font-size: 22px;
   font-weight: 700;
@@ -607,7 +616,8 @@ body {
 .card-col-specialcare { border-left-color: #E11D48; background: #1f0a10; }
 
 .card-client { font-size: 11px; color: var(--text-3); }
-.card-meta { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.card-client-link { cursor: pointer; }
+.card-client-link:hover { color: var(--text-2); text-decoration: underline; }
 
 .tag {
   font-size: 10px;
@@ -988,7 +998,43 @@ body {
   50% { box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
 }
 
-/* STATS */
+/* WEEKLY VIEW */
+.weekly-wrap { max-width: 900px; }
+.weekly-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.weekly-grid { display: flex; flex-direction: column; gap: 12px; }
+.weekly-section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
+.weekly-section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.weekly-section-title .ti { font-size: 14px; }
+.weekly-client-group { margin-bottom: 14px; }
+.weekly-client-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; padding-left: 4px; border-left: 2px solid var(--border-strong); padding-left: 8px; }
+.weekly-task-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius); font-size: 12px; color: var(--text-2); margin-bottom: 3px; }
+.weekly-task-row:hover { background: var(--surface2); }
+.weekly-task-row .tag { font-size: 10px; }
+.weekly-due { font-size: 11px; color: var(--text-3); margin-left: auto; }
+.weekly-due.over { color: var(--red-text); }
+.weekly-empty { font-size: 13px; color: var(--text-3); padding: 8px 0; }
+
+/* NAV weekly color */
+.nav-weekly.active { background: linear-gradient(145deg, #d97706, #b45309); box-shadow: 0 6px 20px rgba(217,119,6,0.4); }
+.nav-weekly:not(.active):hover { background: rgba(217,119,6,0.15); color: #fcd34d; }
+
+/* CLIENT MODAL */
+.modal-wide { max-width: 560px; }
+.client-task-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border); margin-bottom: 6px; cursor: pointer; }
+.client-task-item:hover { background: var(--surface2); }
+.client-task-title { font-size: 13px; color: var(--text); flex: 1; }
+.client-col-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+.col-badge-todo { background: #1a1035; color: #9060ee; }
+.col-badge-waiting { background: #1f1508; color: #d08020; }
+.col-badge-inprogress { background: #0d1525; color: #4080ee; }
+.col-badge-logtotango { background: #0a1a18; color: #0D9488; }
+.col-badge-done { background: #0a1a0e; color: #40c070; }
+.col-badge-specialcare { background: #1f0a10; color: #E11D48; }
+
+/* TIME TRACKING badge on card */
+.card-age { font-size: 9px; color: var(--text-3); margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.card-age.warn { color: var(--amber-text); }
+.card-age.old { color: var(--red-text); }
 .stats-wrap {
   display: grid;
   grid-template-columns: 1fr 1fr;
