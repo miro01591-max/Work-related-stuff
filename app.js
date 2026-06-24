@@ -88,6 +88,8 @@ function openTotango() {
   playSoundClick();
   window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
 }
+
+function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
   playSoundNav();
