@@ -348,7 +348,8 @@ Art der Interaktion: ${type}
 
 Fülle dieses JSON aus (alle Felder auf Deutsch):
 {
-  "customerInfo": "Name und Rolle des Kunden (z.B. Max Mustermann, Projektleiter)",
+  "customerInfo": "Name und Rolle des Kunden (z.B. Max Mustermann, Projektleiter bei Architekturbüro Herzer)",
+  "companyName": "Nur der Firmenname ohne Personen oder Rollen (z.B. Architekturbüro Herzer GmbH)",
   "meetingDetails": "Dauer und Ziel des Meetings",
   "typeContext": "Art der Anfrage und Kontext — was war das Hauptthema/Problem",
   "valueReal": "Welchen Mehrwert hat der Kunde aus diesem Touchpoint erhalten",
@@ -357,6 +358,7 @@ Fülle dieses JSON aus (alle Felder auf Deutsch):
 
 Wichtig:
 - Alles auf Deutsch
+- companyName: NUR der Firmenname, keine Personen, keine Rollen — wenn nicht erkennbar, leerer String
 - nextSteps als Array von konkreten Aktionen mit Verantwortlichem (z.B. "Ilija sendet Einladung für KI-Demo bis 20.06.")
 - Keine Platzhalter lassen — wenn Information fehlt, sinnvoll interpolieren
 - Nur reines JSON zurückgeben`;
@@ -390,6 +392,7 @@ Wichtig:
 
     const data = await res.json();
     const raw = data.content?.[0]?.text || '';
+    trackTokens(data.usage);
 
     let parsed;
     try {
@@ -404,6 +407,12 @@ Wichtig:
     generatedText = 'ready';
     lastParsed = parsed;
     renderSections(parsed);
+
+    // Show company name in result header
+    const company = parsed.companyName || pendingClient || '';
+    if (company) {
+      document.getElementById('result-client-label').textContent = company;
+    }
 
   } catch (e) {
     container.innerHTML = '<div class="tp-section-content loading">Greška pri pozivu API-ja. Provjeri internet vezu.</div>';
@@ -457,19 +466,40 @@ function addToBoard() {
   }
   if (title.length >= 65) title = title.slice(0, 62) + '...';
 
-  // Extract company/client name from parsed customerInfo
-  // customerInfo is typically "Name, Role — Company" or "Name, Company"
-  let client = pendingClient; // use manually entered client if available
+  // Extract company name — priority: manual input > parsed companyName > extracted from customerInfo
+  let client = pendingClient;
+
+  if (!client && lastParsed?.companyName) {
+    client = lastParsed.companyName.trim();
+  }
+
   if (!client && lastParsed?.customerInfo) {
     const info = lastParsed.customerInfo;
-    // Try to extract company after comma, dash, or "von"/"bei"/"from"
-    const companyMatch = info.match(/(?:,\s*|-\s*|–\s*|bei\s+|von\s+|from\s+|@\s*)([^,\-–]+)$/i);
+
+    // Strategy 1: Look for known company suffixes
+    const companyMatch = info.match(/([A-ZÜÖÄ][^,\n]*(?:GmbH|AG|GmbH & Co\.?\s*KG|KG|OHG|e\.V\.|eG|Büro|büro|Studio|Group|Solutions|Services|Systems|Holding|International|GbR|UG|SE)[^,\n]*)/);
     if (companyMatch) {
-      client = companyMatch[1].trim();
-    } else {
-      // Just take the whole customerInfo if short enough, strip role
-      const parts = info.split(',');
-      client = parts[0].trim(); // Take first part (usually name or company)
+      client = companyMatch[1].trim().replace(/\s+/g, ' ');
+    }
+
+    // Strategy 2: Look after "bei", "von", "at", "@"
+    if (!client) {
+      const beiMatch = info.match(/(?:bei|von|at|@)\s+([^,\n\-–]+)/i);
+      if (beiMatch) client = beiMatch[1].trim();
+    }
+
+    // Strategy 3: Last comma-separated segment
+    if (!client) {
+      const parts = info.split(/,\s*|-\s*|–\s*/);
+      if (parts.length >= 2) client = parts[parts.length - 1].trim();
+    }
+
+    // Clean up role words
+    if (client) {
+      client = client
+        .replace(/^(Herr|Frau|Mr|Mrs|Ms|Dr\.?|Prof\.?)\s+/i, '')
+        .replace(/\s*(Geschäftsführer|Projektleiter|Manager|Director|CEO|CTO|Architekt|Ingenieur|Bauleiter|Berater|Consultant|Owner|Inhaber)\s*/gi, '')
+        .trim();
     }
   }
   if (!client) client = '';
@@ -946,7 +976,36 @@ function renderLegend(containerId, data) {
   `).join('');
 }
 
-// ── SPEECH TO TEXT ──────────────────────────────────────────────────────────
+// ── TOKEN TRACKER ────────────────────────────────────────────────────────────
+
+let sessionTokens = { input: 0, output: 0 };
+
+function trackTokens(usage) {
+  if (!usage) return;
+  sessionTokens.input  += usage.input_tokens  || 0;
+  sessionTokens.output += usage.output_tokens || 0;
+  updateTokenDisplay();
+}
+
+function updateTokenDisplay() {
+  const total = sessionTokens.input + sessionTokens.output;
+  // Sonnet 4.6: $3/1M input, $15/1M output
+  const cost = (sessionTokens.input / 1_000_000 * 3) + (sessionTokens.output / 1_000_000 * 15);
+
+  const el = document.getElementById('token-display');
+  if (!el) return;
+
+  // Color by cost
+  let color = '#5DCAA5'; // green — cheap
+  if (cost > 0.10) color = '#EF9F27'; // amber
+  if (cost > 0.50) color = '#F09595'; // red
+
+  el.innerHTML = `
+    <span style="color:${color};font-weight:600">${total.toLocaleString()}</span>
+    <span style="color:rgba(255,255,255,0.3);font-size:10px">tokens</span>
+    <span style="color:${color};font-size:10px">~$${cost.toFixed(3)}</span>
+  `;
+}
 
 let recognition = null;
 let isRecording = false;
@@ -1116,8 +1175,7 @@ Rules:
 
     const data = await res.json();
     const raw  = data.content?.[0]?.text || '';
-
-    let parsed;
+    trackTokens(data.usage);
     try {
       parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     } catch(e) {
