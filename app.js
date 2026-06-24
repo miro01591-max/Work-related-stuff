@@ -110,40 +110,60 @@ function switchTranscriptTab(mode) {
   document.getElementById('tt-file').style.display  = mode === 'file'  ? 'block' : 'none';
 }
 
+function fileDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('file-drop').style.borderColor = 'var(--teal-text)';
+  document.getElementById('file-drop').style.background = 'rgba(93,202,165,0.08)';
+}
+
+function fileDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('file-drop').style.borderColor = '';
+  document.getElementById('file-drop').style.background = '';
+}
+
+function fileDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  fileDragLeave(e);
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.name.match(/\.(txt|md|docx)$/i)) {
+    alert('Podržava samo .txt, .md i .docx datoteke.');
+    return;
+  }
+  processFile(file);
+}
+
 function handleFileUpload(e) {
   const file = e.target.files[0];
-  if (!file) return;
+  if (file) processFile(file);
+}
 
+function processFile(file) {
   const showLoaded = (text) => {
     fileContent = text;
     document.getElementById('file-loaded').style.display = 'flex';
     document.getElementById('file-loaded-name').textContent = file.name;
     document.getElementById('file-drop').style.display = 'none';
   };
-
+  const showError = (msg) => {
+    fileContent = '';
+    document.getElementById('file-loaded-name').textContent = msg;
+    document.getElementById('file-loaded').style.display = 'flex';
+    document.getElementById('file-drop').style.display = 'none';
+  };
   if (file.name.endsWith('.docx')) {
-    // Use mammoth to extract text from docx
+    if (typeof mammoth === 'undefined') { showError('⚠ Reload page and try again'); return; }
     const reader = new FileReader();
-    reader.onload = async ev => {
-      try {
-        const arrayBuffer = ev.target.result;
-        const mammoth = await import('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js').catch(() => null);
-        if (!mammoth) {
-          // Fallback if mammoth fails to load
-          fileContent = '[Could not read .docx — try copy-pasting the text instead]';
-          showLoaded(fileContent);
-          return;
-        }
-        const result = await mammoth.default.extractRawText({ arrayBuffer });
-        showLoaded(result.value);
-      } catch(err) {
-        fileContent = '[Error reading .docx file]';
-        showLoaded(fileContent);
-      }
+    reader.onload = ev => {
+      mammoth.extractRawText({ arrayBuffer: ev.target.result })
+        .then(r => showLoaded(r.value))
+        .catch(() => showError('⚠ Could not read .docx'));
     };
     reader.readAsArrayBuffer(file);
   } else {
-    // Plain text / markdown
     const reader = new FileReader();
     reader.onload = ev => showLoaded(ev.target.result);
     reader.readAsText(file);
@@ -279,6 +299,7 @@ async function generateTP() {
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Generiram...';
   playSoundGenerate();
+  showCharizard('Generating touchpoint...');
 
   const prompt = `Du bist ein Customer Success Manager bei PlanRadar und schreibst Touchpoint-Notizen für Totango auf Deutsch.
 
@@ -355,6 +376,7 @@ Wichtig:
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-sparkles"></i> Generiraj touchpoint';
+    hideCharizard();
   }
 }
 
@@ -1109,6 +1131,143 @@ function launchConfetti() {
     else canvas.remove();
   }
   draw();
+}
+
+// ── PAC-MAN LOADING ANIMATION ────────────────────────────────────────────────
+
+let pacRaf = null;
+let pacMsgInterval = null;
+
+function showCharizard(msg) {
+  const overlay = document.getElementById('charizard-overlay');
+  overlay.style.display = 'flex';
+  startPacmanAnim();
+}
+
+function hideCharizard() {
+  document.getElementById('charizard-overlay').style.display = 'none';
+  if (pacRaf) { cancelAnimationFrame(pacRaf); pacRaf = null; }
+  if (pacMsgInterval) { clearInterval(pacMsgInterval); pacMsgInterval = null; }
+}
+
+function startPacmanAnim() {
+  if (pacRaf) cancelAnimationFrame(pacRaf);
+  const canvas = document.getElementById('charizard-canvas');
+  canvas.width  = 360;
+  canvas.height = 80;
+  const ctx = canvas.getContext('2d');
+  const W = 360, H = 80, CY = 38;
+
+  let frame = 0;
+  let pacX  = -30;
+  let dir   = 1;
+  let score = 0;
+
+  const dots = Array.from({length: 13}, (_, i) => ({
+    x: 28 + i * 24, eaten: false, big: i % 4 === 0
+  }));
+
+  const ghosts = [
+    { x: W+60,  color:'#ff0000' },
+    { x: W+100, color:'#ffb8ff' },
+    { x: W+140, color:'#00ffff' },
+  ];
+
+  const msgs = ['GENERATING...', 'WAKA WAKA...', 'ALMOST DONE...', 'CLAUDE IS THINKING...'];
+  let mi = 0;
+  document.getElementById('charizard-msg').textContent = msgs[0];
+  pacMsgInterval = setInterval(() => {
+    mi = (mi+1) % msgs.length;
+    const el = document.getElementById('charizard-msg');
+    if (el) el.textContent = msgs[mi];
+  }, 1800);
+
+  function drawPacman(x, mouthAngle, left) {
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    const s = left ? Math.PI + mouthAngle : mouthAngle;
+    const e = left ? Math.PI - mouthAngle : -mouthAngle;
+    ctx.moveTo(x, CY);
+    ctx.arc(x, CY, 16, s, e);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#0f0f13';
+    ctx.beginPath();
+    ctx.arc(left ? x-5 : x+5, CY-7, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawGhost(x, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, CY-4, 12, Math.PI, 0);
+    ctx.lineTo(x+12, CY+14);
+    for (let i=3; i>=0; i--) {
+      ctx.lineTo(x - 12 + i*8, i%2===0 ? CY+14 : CY+8);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(x-4,CY-5,3.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+4,CY-5,3.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0000cc';
+    ctx.beginPath(); ctx.arc(x-3,CY-4,1.8,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+5,CY-4,1.8,0,Math.PI*2); ctx.fill();
+  }
+
+  function tick() {
+    ctx.fillStyle = '#0f0f13';
+    ctx.fillRect(0, 0, W, H);
+
+    // Dashed ground line
+    ctx.strokeStyle = '#1a6bc4'; ctx.lineWidth = 2;
+    ctx.setLineDash([8,4]);
+    ctx.beginPath(); ctx.moveTo(0,CY+20); ctx.lineTo(W,CY+20); ctx.stroke();
+    ctx.setLineDash([]);
+
+    pacX += 2.2 * dir;
+    const mouth = Math.abs(Math.sin(frame*0.28)) * 0.38;
+
+    // Eat dots
+    dots.forEach(d => {
+      if (d.eaten) return;
+      if (Math.abs(pacX - d.x) < 15) { d.eaten=true; score += d.big?50:10; }
+    });
+
+    // Draw dots
+    dots.forEach(d => {
+      if (d.eaten) return;
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(d.x, CY, d.big ? 6 : 3, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    // Move & draw ghosts
+    ghosts.forEach(g => { g.x -= 2.0; drawGhost(g.x, g.color); });
+
+    drawPacman(pacX, mouth, dir===-1);
+
+    // Score
+    ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.font='8px monospace';
+    ctx.fillText(score, W-50, 14);
+
+    // Reset
+    if (pacX > W+40 || pacX < -40) {
+      dir *= -1;
+      dots.forEach(d => d.eaten=false);
+      pacX = dir===1 ? -30 : W+30;
+      ghosts[0].x = dir===1 ? W+60  : -60;
+      ghosts[1].x = dir===1 ? W+100 : -100;
+      ghosts[2].x = dir===1 ? W+140 : -140;
+    }
+
+    frame++;
+    pacRaf = requestAnimationFrame(tick);
+  }
+
+  tick();
 }
 
 let floatAnim = null;

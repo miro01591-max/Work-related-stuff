@@ -97,7 +97,11 @@
                 <textarea id="tp-raw" placeholder="Zalijepi transcript ovdje — Teams/Zoom summary, key points, ili slobodni opis situacije..." rows="6"></textarea>
               </div>
               <div id="tt-file" style="display:none">
-                <div class="file-drop" id="file-drop" onclick="document.getElementById('tp-file').click()">
+                <div class="file-drop" id="file-drop"
+                  onclick="document.getElementById('tp-file').click()"
+                  ondragover="fileDragOver(event)"
+                  ondragleave="fileDragLeave(event)"
+                  ondrop="fileDrop(event)">
                   <i class="ti ti-file-text" style="font-size:24px;color:var(--text-3)"></i>
                   <span>Klikni ili prevuci datoteku</span>
                   <span class="file-hint">Podržava .txt, .md, .docx</span>
@@ -325,6 +329,13 @@
     </div>
   </div>
 
+  <!-- PAC-MAN LOADING OVERLAY -->
+  <div id="charizard-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:20px">
+    <canvas id="charizard-canvas" width="360" height="80"></canvas>
+    <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px" id="charizard-msg">GENERATING...</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
