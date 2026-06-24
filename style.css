@@ -675,6 +675,71 @@ body {
 }
 .link-sm:hover { color: var(--text); }
 
+/* WELCOME MODAL */
+.welcome-modal {
+  text-align: center;
+  padding: 36px 32px 28px;
+  max-width: 360px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.welcome-modal::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+.welcome-emoji {
+  font-size: 48px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.welcome-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.welcome-sub {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-bottom: 24px;
+}
+.welcome-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  justify-content: center;
+}
+.welcome-stat-item {
+  flex: 1;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 10px;
+  border: 0.5px solid var(--border);
+}
+.welcome-stat-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.welcome-stat-num.warn { color: #f87171; }
+.welcome-stat-num.good { color: #5DCAA5; }
+.welcome-stat-lbl {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
 /* SPEECH BAR */
 .speech-bar {
   background: var(--surface);

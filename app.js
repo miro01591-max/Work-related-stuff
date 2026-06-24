@@ -938,6 +938,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── WELCOME MODAL ─────────────────────────────────────────────────────────────
+
+function closeWelcome() {
+  document.getElementById('welcome-modal').classList.remove('open');
+}
+
+function initWelcome() {
+  const open    = tasks.filter(t => t.status !== 'done').length;
+  const overdue = tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date(today())).length;
+  const done    = tasks.filter(t => t.status === 'done').length;
+
+  document.getElementById('welcome-stats').innerHTML = `
+    <div class="welcome-stat-item">
+      <div class="welcome-stat-num">${open}</div>
+      <div class="welcome-stat-lbl">Open</div>
+    </div>
+    <div class="welcome-stat-item">
+      <div class="welcome-stat-num ${overdue > 0 ? 'warn' : ''}">${overdue}</div>
+      <div class="welcome-stat-lbl">Overdue</div>
+    </div>
+    <div class="welcome-stat-item">
+      <div class="welcome-stat-num good">${done}</div>
+      <div class="welcome-stat-lbl">Done</div>
+    </div>
+  `;
+}
+
 // ── AVATAR ───────────────────────────────────────────────────────────────────
 
 function handleAvatarUpload(e) {
@@ -970,3 +997,4 @@ function loadAvatar() {
 loadTasks();
 updateHeaderStats();
 loadAvatar();
+initWelcome();
