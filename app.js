@@ -938,7 +938,35 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// ── AVATAR ───────────────────────────────────────────────────────────────────
+
+function handleAvatarUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    localStorage.setItem('cs_dashboard_avatar', dataUrl);
+    setAvatar(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function setAvatar(dataUrl) {
+  const img = document.getElementById('avatar-img');
+  const placeholder = document.getElementById('avatar-placeholder');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  placeholder.style.display = 'none';
+}
+
+function loadAvatar() {
+  const saved = localStorage.getItem('cs_dashboard_avatar');
+  if (saved) setAvatar(saved);
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 loadTasks();
 updateHeaderStats();
+loadAvatar();

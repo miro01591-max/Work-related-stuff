@@ -17,6 +17,15 @@
         <span>CS</span>
       </div>
 
+      <div class="sidebar-avatar" onclick="document.getElementById('avatar-file-input').click()" title="Upload photo">
+        <div class="avatar-placeholder" id="avatar-placeholder">
+          <i class="ti ti-user"></i>
+        </div>
+        <img id="avatar-img" src="" alt="Profile" style="display:none" />
+        <div class="avatar-overlay"><i class="ti ti-camera"></i></div>
+      </div>
+      <input type="file" id="avatar-file-input" accept="image/*" onchange="handleAvatarUpload(event)" />
+
       <nav class="sidebar-nav">
         <button class="nav-btn nav-tp active" data-tab="tp" onclick="switchTab('tp')">
           <i class="ti ti-file-text"></i>
