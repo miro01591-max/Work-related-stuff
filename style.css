@@ -538,6 +538,22 @@ body {
   margin-bottom: 16px;
 }
 .modal-header h3 { font-size: 15px; font-weight: 600; }
+.det-title-input {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid transparent;
+  padding: 2px 4px;
+  border-radius: 0;
+  font-family: inherit;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+.det-title-input:hover { border-bottom-color: var(--border-strong); }
+.det-title-input:focus { outline: none; border-bottom-color: var(--text-2); background: var(--surface2); border-radius: var(--radius) var(--radius) 0 0; }
 .modal-client { font-size: 13px; color: var(--text-2); margin-bottom: 14px; }
 .modal-desc { font-size: 13px; color: var(--text-2); margin-bottom: 14px; line-height: 1.6; }
 .modal-footer {

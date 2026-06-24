@@ -164,10 +164,13 @@
   <div class="modal-bg" id="det-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3 id="det-title"></h3>
+        <input class="det-title-input" id="det-title" type="text" placeholder="Task title..." />
         <button class="icon-btn" onclick="closeDetail()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
-      <div class="modal-client" id="det-client"></div>
+      <div class="field">
+        <label for="det-client-input">Client</label>
+        <input id="det-client-input" type="text" placeholder="Client name" />
+      </div>
       <div class="field">
         <label>Status</label>
         <div class="status-row" id="det-status-row"></div>
