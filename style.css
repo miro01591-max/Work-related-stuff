@@ -423,6 +423,12 @@ body {
   border-color: var(--teal-text);
 }
 .btn-success:hover { opacity: 0.85; }
+.btn-tasks {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+  border-color: var(--purple-text);
+}
+.btn-tasks:hover { opacity: 0.85; }
 .btn-ghost { border-color: var(--border); color: var(--text-2); }
 .btn-ghost:hover { color: var(--text); }
 .btn-sm { padding: 6px 10px; font-size: 12px; }
@@ -587,6 +593,34 @@ body {
 }
 .add-btn:hover { background: var(--surface); color: var(--text-2); }
 .add-btn .ti { font-size: 13px; }
+
+/* TOTANGO CHECKBOX */
+.card-totango {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 0.5px solid var(--border);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background 0.15s;
+}
+.card-totango:hover { background: rgba(255,255,255,0.04); }
+.totango-check { display: flex; align-items: center; }
+.totango-check .ti {
+  font-size: 14px;
+  color: var(--text-3);
+  transition: color 0.2s;
+}
+.totango-check.checked .ti { color: #5DCAA5; }
+.totango-label {
+  font-size: 10px;
+  color: var(--text-3);
+  transition: color 0.2s;
+}
+.card-totango-done .totango-label { color: #5DCAA5; font-weight: 500; }
+.card-totango-done { border-top-color: rgba(93,202,165,0.3); }
 
 /* MODALS */
 .modal-bg {

@@ -241,7 +241,7 @@ function renderSections(parsed) {
 }
 
 // Build plain text from editable textareas for Totango clipboard
-// Format: **Heading** bold + empty line between sections
+// Format: HEADING on own line (unicode bold), empty line, content, empty line before next
 function buildPlainText() {
   const sections = [
     { key: 'customerInfo',   label: 'Customer Information (Name, Role)' },
@@ -251,15 +251,26 @@ function buildPlainText() {
     { key: 'nextSteps',      label: 'Next Steps' },
   ];
 
-  const lines = [];
+  // Convert text to unicode bold characters (renders as bold in Totango rich text)
+  function toBold(str) {
+    return str.split('').map(ch => {
+      const code = ch.codePointAt(0);
+      if (code >= 65 && code <= 90)  return String.fromCodePoint(code - 65 + 0x1D400); // A-Z
+      if (code >= 97 && code <= 122) return String.fromCodePoint(code - 97 + 0x1D41A); // a-z
+      if (code >= 48 && code <= 57)  return String.fromCodePoint(code - 48 + 0x1D7CE); // 0-9
+      return ch;
+    }).join('');
+  }
+
+  const parts = [];
   document.querySelectorAll('.tp-section-textarea').forEach(ta => {
     const key = ta.dataset.key;
     const sec = sections.find(s => s.key === key);
     if (sec && ta.value.trim()) {
-      lines.push(`**${sec.label}**\n${ta.value.trim()}`);
+      parts.push(`${toBold(sec.label)}\n${ta.value.trim()}`);
     }
   });
-  return lines.join('\n\n');
+  return parts.join('\n\n');
 }
 
 async function generateTP() {
@@ -448,6 +459,61 @@ function addToBoard() {
   playAddSound();
 }
 
+function createTasksFromNextSteps() {
+  // Find the Next Steps textarea
+  const nextStepsTa = [...document.querySelectorAll('.tp-section-textarea')]
+    .find(ta => ta.dataset.key === 'nextSteps');
+
+  if (!nextStepsTa || !nextStepsTa.value.trim()) {
+    showFeedback('No next steps found to create tasks from.', false);
+    return;
+  }
+
+  const raw = nextStepsTa.value.trim();
+  const client = pendingClient || '';
+  const due = document.getElementById('tp-due').value;
+
+  // Split by lines starting with - or • or numbers, or by sentence
+  const lines = raw
+    .split(/\n|(?<=\.)\s+(?=[A-ZÜÖÄ-])|(?<=\.)(?=\s*-)|^-\s*/m)
+    .map(l => l.replace(/^[-•\d\.]+\s*/, '').trim())
+    .filter(l => l.length > 10);
+
+  if (lines.length === 0) {
+    showFeedback('Could not parse next steps.', false);
+    return;
+  }
+
+  let created = 0;
+  lines.forEach(step => {
+    if (step.length < 10) return;
+    const title = step.length > 65 ? step.slice(0, 62) + '...' : step;
+
+    // Auto-detect tag
+    const lower = step.toLowerCase();
+    let tag = 'Follow-up';
+    if (lower.includes('bug') || lower.includes('fehler') || lower.includes('problem')) tag = 'Bug';
+    else if (lower.includes('rechnung') || lower.includes('billing') || lower.includes('zahlung')) tag = 'Billing';
+    else if (lower.includes('support') || lower.includes('ticket')) tag = 'Support';
+
+    tasks.push({
+      id: nextId++,
+      title,
+      client,
+      tag,
+      status: 'todo',
+      due,
+      note: step
+    });
+    created++;
+  });
+
+  saveTasks();
+  updateHeaderStats();
+  playAddSound();
+  showFeedback(`✓ Created ${created} task${created !== 1 ? 's' : ''} on the board!`, true);
+}
+
 function showFeedback(msg, success) {
   const el = document.getElementById('feedback-msg');
   el.textContent = msg;
@@ -537,7 +603,27 @@ function renderBoard() {
         <div class="card-meta">
           <span class="tag ${tagCls}">${t.tag}</span>
           ${dl ? `<span class="due-tag${dl.over ? ' over' : ''}">${dl.over ? '<i class="ti ti-alert-circle" style="font-size:12px;vertical-align:-1px"></i> ' : ''}${escHtml(dl.text)}</span>` : ''}
+        </div>
+        <div class="card-totango ${t.totango ? 'card-totango-done' : ''}" data-id="${t.id}">
+          <span class="totango-check ${t.totango ? 'checked' : ''}">
+            <i class="ti ${t.totango ? 'ti-circle-check' : 'ti-circle'}"></i>
+          </span>
+          <span class="totango-label">${t.totango ? 'In Totango ✓' : 'Add to Totango'}</span>
         </div>`;
+
+      // Totango checkbox click
+      card.querySelector('.card-totango').addEventListener('click', e => {
+        e.stopPropagation();
+        const task = tasks.find(x => x.id === t.id);
+        if (!task) return;
+        if (!task.totango) {
+          task.totango = true;
+          saveTasks();
+          renderBoard();
+          playDoneSound();
+          launchConfetti();
+        }
+      });
 
       card.addEventListener('dragstart', e => {
         dragId = t.id;
@@ -549,7 +635,6 @@ function renderBoard() {
         document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
       });
 
-      // Click to open detail — only if not dragging
       card.addEventListener('click', () => {
         if (dragId === null) openDetail(t.id);
       });
