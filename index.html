@@ -99,10 +99,10 @@
               <div id="tt-file" style="display:none">
                 <div class="file-drop" id="file-drop" onclick="document.getElementById('tp-file').click()">
                   <i class="ti ti-file-text" style="font-size:24px;color:var(--text-3)"></i>
-                  <span>Klikni ili prevuci .txt datoteku</span>
-                  <span class="file-hint">Podržava .txt format</span>
+                  <span>Klikni ili prevuci datoteku</span>
+                  <span class="file-hint">Podržava .txt, .md, .docx</span>
                 </div>
-                <input type="file" id="tp-file" accept=".txt,.md" style="display:none" onchange="handleFileUpload(event)" />
+                <input type="file" id="tp-file" accept=".txt,.md,.docx" style="display:none" onchange="handleFileUpload(event)" />
                 <div id="file-loaded" class="file-loaded" style="display:none">
                   <i class="ti ti-circle-check" style="color:var(--teal-text)"></i>
                   <span id="file-loaded-name"></span>
@@ -132,13 +132,13 @@
             <div class="tp-sections" id="tp-sections"></div>
             <div class="action-row">
               <button class="btn" onclick="copyTP()">
-                <i class="ti ti-copy"></i> Kopiraj za Totango
+                <i class="ti ti-copy"></i> Copy for Totango
               </button>
               <button class="btn btn-success" onclick="addToBoard()">
-                <i class="ti ti-circle-plus"></i> Dodaj u board
+                <i class="ti ti-circle-plus"></i> Add to board
               </button>
               <button class="btn btn-ghost" onclick="resetTP()">
-                <i class="ti ti-refresh"></i> Novi
+                <i class="ti ti-refresh"></i> New
               </button>
             </div>
             <div class="feedback-msg" id="feedback-msg"></div>
@@ -317,7 +317,7 @@
       <div style="font-size:26px;font-weight:700;color:#f0f0ec;margin-bottom:8px">Welcome, Ilija!</div>
       <div style="font-size:15px;color:#a0a09a;margin-bottom:28px">Time to work!!!</div>
       <div style="display:flex;gap:10px;margin-bottom:32px" id="welcome-stats"></div>
-      <div id="btn-wrap" style="position:relative;height:100px;width:100%">
+      <div id="btn-wrap" style="position:relative;height:140px;width:100%;overflow:hidden;border-radius:12px">
         <button id="go-btn" onmouseenter="runAway(event)" onclick="closeWelcome()" style="padding:13px 32px;font-size:14px;font-weight:600;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;cursor:pointer;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);white-space:nowrap;box-shadow:0 4px 20px rgba(99,102,241,0.5);transition:left .15s ease,top .15s ease,box-shadow .15s;font-family:inherit;display:flex;align-items:center;gap:8px;font-size:15px">
           <i class="ti ti-arrow-right" style="font-size:16px" aria-hidden="true"></i> Let's go
         </button>

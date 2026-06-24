@@ -113,14 +113,41 @@ function switchTranscriptTab(mode) {
 function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    fileContent = ev.target.result;
+
+  const showLoaded = (text) => {
+    fileContent = text;
     document.getElementById('file-loaded').style.display = 'flex';
     document.getElementById('file-loaded-name').textContent = file.name;
     document.getElementById('file-drop').style.display = 'none';
   };
-  reader.readAsText(file);
+
+  if (file.name.endsWith('.docx')) {
+    // Use mammoth to extract text from docx
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const arrayBuffer = ev.target.result;
+        const mammoth = await import('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js').catch(() => null);
+        if (!mammoth) {
+          // Fallback if mammoth fails to load
+          fileContent = '[Could not read .docx — try copy-pasting the text instead]';
+          showLoaded(fileContent);
+          return;
+        }
+        const result = await mammoth.default.extractRawText({ arrayBuffer });
+        showLoaded(result.value);
+      } catch(err) {
+        fileContent = '[Error reading .docx file]';
+        showLoaded(fileContent);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // Plain text / markdown
+    const reader = new FileReader();
+    reader.onload = ev => showLoaded(ev.target.result);
+    reader.readAsText(file);
+  }
 }
 
 function clearFile() {
@@ -147,7 +174,7 @@ function saveApiKey() {
   generateTP();
 }
 
-// Renders structured touchpoint sections into the result card
+// Renders structured touchpoint sections as editable textareas
 function renderSections(parsed) {
   const container = document.getElementById('tp-sections');
   container.innerHTML = '';
@@ -161,44 +188,57 @@ function renderSections(parsed) {
   ];
 
   sections.forEach(s => {
-    const val = parsed[s.key];
+    let val = parsed[s.key];
     if (!val) return;
+
+    // Normalise next steps array to string
+    if (s.key === 'nextSteps' && Array.isArray(val)) {
+      val = val.map(step => `- ${step}`).join('\n');
+    }
+
     const div = document.createElement('div');
     div.className = 'tp-section';
-    div.innerHTML = `<div class="tp-section-label">${s.label}</div>`;
 
-    if (s.key === 'nextSteps' && Array.isArray(val)) {
-      const ul = document.createElement('ul');
-      ul.className = 'tp-next-steps tp-section-content';
-      val.forEach(step => {
-        const li = document.createElement('li');
-        li.textContent = step;
-        ul.appendChild(li);
-      });
-      div.appendChild(ul);
-    } else {
-      const p = document.createElement('div');
-      p.className = 'tp-section-content';
-      p.textContent = val;
-      div.appendChild(p);
-    }
+    const label = document.createElement('div');
+    label.className = 'tp-section-label';
+    label.textContent = s.label;
+
+    const ta = document.createElement('textarea');
+    ta.className = 'tp-section-textarea';
+    ta.dataset.key = s.key;
+    ta.value = val;
+    ta.rows = s.key === 'nextSteps' ? 4 : 3;
+    // Auto-resize on input
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+
+    div.appendChild(label);
+    div.appendChild(ta);
     container.appendChild(div);
   });
 }
 
-// Build plain text for clipboard (Totango copy)
-function buildPlainText(parsed) {
+// Build plain text from editable textareas for Totango clipboard
+// Format: **Heading** bold + empty line between sections
+function buildPlainText() {
+  const sections = [
+    { key: 'customerInfo',   label: 'Customer Information (Name, Role)' },
+    { key: 'meetingDetails', label: 'Meeting Details (Duration, Objective)' },
+    { key: 'typeContext',    label: 'Type of Request and Context' },
+    { key: 'valueReal',      label: 'Value Realisation' },
+    { key: 'nextSteps',      label: 'Next Steps' },
+  ];
+
   const lines = [];
-  if (parsed.customerInfo)   lines.push(`Customer Information (Name, Role):\n${parsed.customerInfo}`);
-  if (parsed.meetingDetails) lines.push(`Meeting Details (Duration, Objective):\n${parsed.meetingDetails}`);
-  if (parsed.typeContext)    lines.push(`Type of Request and Context:\n${parsed.typeContext}`);
-  if (parsed.valueReal)      lines.push(`Value Realisation:\n${parsed.valueReal}`);
-  if (parsed.nextSteps) {
-    const steps = Array.isArray(parsed.nextSteps)
-      ? parsed.nextSteps.map(s => `- ${s}`).join('\n')
-      : parsed.nextSteps;
-    lines.push(`Next Steps:\n${steps}`);
-  }
+  document.querySelectorAll('.tp-section-textarea').forEach(ta => {
+    const key = ta.dataset.key;
+    const sec = sections.find(s => s.key === key);
+    if (sec && ta.value.trim()) {
+      lines.push(`**${sec.label}**\n${ta.value.trim()}`);
+    }
+  });
   return lines.join('\n\n');
 }
 
@@ -305,7 +345,7 @@ Wichtig:
       return;
     }
 
-    generatedText = buildPlainText(parsed);
+    generatedText = 'ready';
     lastParsed = parsed;
     renderSections(parsed);
 
@@ -320,8 +360,9 @@ Wichtig:
 
 function copyTP() {
   if (!generatedText) return;
+  const text = buildPlainText();
   playSoundCopy();
-  navigator.clipboard.writeText(generatedText).then(() => {
+  navigator.clipboard.writeText(text).then(() => {
     showFeedback('Kopirano! Zalijepi u Totango.', false);
   }).catch(() => {
     const ta = document.createElement('textarea');
@@ -369,6 +410,7 @@ function addToBoard() {
   const due = document.getElementById('tp-due').value;
   const tag = pendingType === 'Check-in' ? 'Follow-up' : pendingType;
 
+  const note = buildPlainText();
   tasks.push({
     id: nextId++,
     title,
@@ -376,7 +418,7 @@ function addToBoard() {
     tag,
     status: 'todo',
     due,
-    note: generatedText
+    note
   });
   saveTasks();
   updateHeaderStats();
@@ -1069,43 +1111,57 @@ function launchConfetti() {
   draw();
 }
 
-let runCount = 0;
+let floatAnim = null;
 
-function runAway(e) {
-  runCount++;
+function startFloating() {
   const btn  = document.getElementById('go-btn');
   const wrap = document.getElementById('btn-wrap');
-  const wr   = wrap.getBoundingClientRect();
-  const bw   = btn.offsetWidth;
-  const bh   = btn.offsetHeight;
+  if (!btn || !wrap) return;
 
-  if (runCount > 5) {
-    btn.style.left      = '50%';
-    btn.style.top       = '50%';
-    btn.style.transform = 'translate(-50%, -50%)';
-    btn.title = 'ok fine 😅';
-    runCount = 0;
-    return;
+  const bw = btn.offsetWidth;
+  const bh = btn.offsetHeight;
+  const ww = wrap.offsetWidth;
+  const wh = wrap.offsetHeight;
+
+  let x  = (ww - bw) / 2;
+  let y  = (wh - bh) / 2;
+  let vx = 1.4 + Math.random() * 0.8;
+  let vy = 1.2 + Math.random() * 0.8;
+
+  // Remove mouse interaction
+  btn.onmouseenter = null;
+
+  function animate() {
+    x += vx;
+    y += vy;
+
+    // Bounce off walls
+    if (x <= 0)        { x = 0;        vx = Math.abs(vx); }
+    if (x >= ww - bw)  { x = ww - bw;  vx = -Math.abs(vx); }
+    if (y <= 0)        { y = 0;        vy = Math.abs(vy); }
+    if (y >= wh - bh)  { y = wh - bh;  vy = -Math.abs(vy); }
+
+    btn.style.left      = x + 'px';
+    btn.style.top       = y + 'px';
+    btn.style.transform = 'none';
+    btn.style.transition = 'none';
+
+    floatAnim = requestAnimationFrame(animate);
   }
 
-  const cx = e.clientX - wr.left;
-  const cy = e.clientY - wr.top;
-  const maxX = wr.width  - bw;
-  const maxY = wr.height - bh;
-
-  let nx, ny, tries = 0;
-  do {
-    nx = bw/2 + Math.random() * (wr.width  - bw);
-    ny = bh/2 + Math.random() * (wr.height - bh);
-    tries++;
-  } while (tries < 30 && Math.hypot(nx - cx, ny - cy) < 110);
-
-  btn.style.left      = (nx - bw/2) + 'px';
-  btn.style.top       = (ny - bh/2) + 'px';
-  btn.style.transform = `rotate(${(Math.random()-0.5)*14}deg)`;
+  floatAnim = requestAnimationFrame(animate);
 }
 
+function stopFloating() {
+  if (floatAnim) cancelAnimationFrame(floatAnim);
+  floatAnim = null;
+}
+
+// Keep runAway as no-op (mouse no longer chases)
+function runAway(e) {}
+
 function closeWelcome() {
+  stopFloating();
   playSoundNav();
   const el = document.getElementById('welcome-modal');
   el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
@@ -1134,6 +1190,8 @@ function initWelcome() {
       <div style="font-size:11px;color:#505048;margin-top:4px;text-transform:uppercase;letter-spacing:.06em">Done</div>
     </div>
   `;
+  // Start floating after a short delay so the button is rendered
+  setTimeout(startFloating, 300);
 }
 
 // ── AVATAR ───────────────────────────────────────────────────────────────────
