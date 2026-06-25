@@ -324,6 +324,12 @@
         <h3>New task</h3>
         <button class="icon-btn" onclick="closeAdd()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
+
+      <button class="voice-fill-btn" id="voice-fill-add-btn" onclick="voiceFillNewTask()">
+        <i class="ti ti-microphone"></i> Fill entire task by voice
+      </button>
+      <div class="voice-fill-status" id="voice-fill-add-status"></div>
+
       <div class="field">
         <label for="new-title">Title</label>
         <input id="new-title" type="text" placeholder="Short description..." />

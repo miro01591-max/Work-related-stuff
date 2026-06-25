@@ -1779,6 +1779,122 @@ Rules: status=waiting if waiting for response, specialcare if urgent/critical, t
   try { voiceFillRec.start(); } catch(e) { voiceFillRec = null; btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice'; }
 }
 
+// ── VOICE FILL NEW TASK ───────────────────────────────────────────────────────
+
+let voiceFillAddRec = null;
+
+async function voiceFillNewTask() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { alert('Speech not supported in this browser.'); return; }
+
+  const btn    = document.getElementById('voice-fill-add-btn');
+  const status = document.getElementById('voice-fill-add-status');
+
+  if (voiceFillAddRec) {
+    voiceFillAddRec.stop(); voiceFillAddRec = null;
+    btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+    btn.classList.remove('recording');
+    return;
+  }
+
+  btn.innerHTML = '<i class="ti ti-microphone-off"></i> Recording... click to stop';
+  btn.classList.add('recording');
+  status.textContent = '🎤 Speak: title, client, category, notes, due date...';
+
+  let fullTranscript = '';
+
+  voiceFillAddRec = initSpeech({
+    continuous: true,
+    lang: 'de-DE',
+    onResult: (transcript) => {
+      fullTranscript = transcript;
+      status.textContent = `🎤 "${transcript.slice(0, 60)}${transcript.length > 60 ? '...' : ''}"`;
+    },
+    onEnd: async () => {
+      btn.innerHTML = '<i class="ti ti-loader"></i> Claude is filling...';
+      btn.classList.remove('recording');
+      voiceFillAddRec = null;
+
+      if (!fullTranscript.trim()) {
+        status.textContent = '⚠ No speech detected.';
+        btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+        return;
+      }
+
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        document.getElementById('apikey-modal').classList.add('open');
+        btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+        status.textContent = '';
+        return;
+      }
+
+      status.textContent = '⏳ Analysing...';
+
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 400,
+            messages: [{ role: 'user', content: `Parse this voice input into a task. Today: ${today()}.
+
+Voice: "${fullTranscript}"
+
+Return ONLY valid JSON:
+{
+  "title": "short task title max 70 chars",
+  "client": "company name only, empty if not mentioned",
+  "tag": "one of: Support, Bug, Feature, Billing, Follow-up",
+  "note": "any extra context",
+  "due": "YYYY-MM-DD if date mentioned, else empty"
+}
+
+tag: Support if issue/problem/ticket, Bug if error/broken, Feature if request, Billing if invoice/payment, Follow-up otherwise.
+Calculate due from today (${today()}). Respond in the language of the voice input.` }]
+          })
+        });
+        const data = await res.json();
+        trackTokens(data.usage);
+        const parsed = JSON.parse(data.content?.[0]?.text?.replace(/```json|```/g, '').trim() || '{}');
+
+        if (parsed.title)  document.getElementById('new-title').value  = parsed.title;
+        if (parsed.client) document.getElementById('new-client').value = parsed.client;
+        if (parsed.note)   document.getElementById('new-note').value   = parsed.note;
+        if (parsed.due)    document.getElementById('new-due').value    = parsed.due;
+        if (parsed.tag) {
+          const sel = document.getElementById('new-tag');
+          const opt = [...sel.options].find(o => o.value === parsed.tag);
+          if (opt) sel.value = parsed.tag;
+        }
+
+        status.textContent = '✓ All fields filled!';
+        playAddSound();
+        setTimeout(() => { status.textContent = ''; }, 3000);
+
+      } catch(e) {
+        status.textContent = '⚠ Error — try again.';
+      }
+
+      btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+    },
+    onError: (err) => {
+      btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+      btn.classList.remove('recording');
+      voiceFillAddRec = null;
+      status.textContent = `⚠ ${err}`;
+    }
+  });
+
+  try { voiceFillAddRec.start(); } catch(e) { voiceFillAddRec = null; btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice'; }
+}
+
 function updateMicBtn() {
   const btn  = document.getElementById('mic-btn');
   const icon = document.getElementById('mic-icon');
