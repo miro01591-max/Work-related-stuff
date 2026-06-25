@@ -1294,6 +1294,17 @@ function showDrilldown(slice) {
   }
 
   // Show drilldown panel with color accent
+  const scrollEl = document.getElementById('drilldown-tasks');
+  scrollEl.style.scrollbarColor = '#e879a0 #0f0a14';
+  scrollEl.style.scrollbarWidth = 'thin';
+
+  if (!document.getElementById('dd-scrollbar-style')) {
+    const s = document.createElement('style');
+    s.id = 'dd-scrollbar-style';
+    s.textContent = '#drilldown-tasks::-webkit-scrollbar{width:8px!important}#drilldown-tasks::-webkit-scrollbar-track{background:#0f0a14!important;border-radius:999px!important}#drilldown-tasks::-webkit-scrollbar-thumb{background:#e879a0!important;border-radius:999px!important;border:2px solid #0f0a14!important}#drilldown-tasks::-webkit-scrollbar-button{display:none!important}';
+    document.head.appendChild(s);
+  }
+
   const panel = document.getElementById('stats-drilldown');
   panel.style.display = 'flex';
   panel.style.flexDirection = 'column';
