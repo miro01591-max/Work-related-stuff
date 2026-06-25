@@ -105,202 +105,198 @@ function openTotango() {
 
 function launchRocket(callback) {
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99997;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000011;z-index:99997;display:flex;align-items:center;justify-content:center';
 
   const canvas = document.createElement('canvas');
-  canvas.width = 300; canvas.height = 400;
-  canvas.style.cssText = 'display:block';
-
-  const msg = document.createElement('div');
-  msg.style.cssText = 'font-family:-apple-system,sans-serif;font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:.08em';
-  msg.textContent = 'LAUNCHING TOTANGO...';
+  canvas.width = 200; canvas.height = 180;
+  canvas.style.cssText = 'image-rendering:pixelated;width:400px;height:360px';
 
   overlay.appendChild(canvas);
-  overlay.appendChild(msg);
   document.body.appendChild(overlay);
 
   const ctx = canvas.getContext('2d');
-  const W = 300, H = 400;
-  let frame = 0;
-  let rocketY = H - 80;
-  let launched = false;
-  let raf;
+  ctx.imageSmoothingEnabled = false;
+  const W = 200, H = 180;
+  let frame = 0, phase = 'count', ry = 130;
+  let exP = [], wL = [], raf;
 
-  // Stars
-  const stars = Array.from({length: 60}, () => ({
-    x: Math.random() * W, y: Math.random() * H,
-    r: Math.random() * 1.5 + 0.3,
-    twinkle: Math.random() * Math.PI * 2
+  const stars = Array.from({length:50}, () => ({
+    x: Math.random()*W|0, y: Math.random()*H|0,
+    c: ['#ffffff','#ffff88','#88ffff','#ffaaff','#aaaaff'][Math.random()*5|0],
+    t: Math.random()*8|0
   }));
 
-  // Flame particles
-  const particles = [];
+  function px(x,y,w,h,c) { ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
 
-  function spawnParticles(rx, ry) {
-    for (let i = 0; i < 4; i++) {
-      particles.push({
-        x: rx + (Math.random() - 0.5) * 10,
-        y: ry + 40,
-        vx: (Math.random() - 0.5) * 2,
-        vy: 2 + Math.random() * 3,
-        life: 1,
-        r: 4 + Math.random() * 6,
-        color: Math.random() > 0.5 ? '#ff6600' : '#ffcc00'
-      });
+  function drawRocket(x,y) {
+    px(x+4,y,3,2,'#ff2222'); px(x+3,y+2,5,2,'#cc1111'); px(x+2,y+4,7,2,'#ff4444');
+    px(x+2,y+6,7,10,'#dddddd'); px(x+3,y+6,5,10,'#ffffff');
+    px(x+2,y+10,7,2,'#2244ff'); px(x+3,y+10,5,2,'#4466ff');
+    px(x+3,y+7,5,5,'#1133cc'); px(x+4,y+8,3,3,'#5599ff');
+    px(x+4,y+8,2,2,'#88bbff'); px(x+4,y+8,1,1,'#ffffff');
+    px(x+3,y+13,1,1,'#ffff00'); px(x+7,y+13,1,1,'#ffff00');
+    px(x+1,y+12,1,5,'#ff6600'); px(x,y+14,1,3,'#cc4400');
+    px(x+9,y+12,1,5,'#ff6600'); px(x+10,y+14,1,3,'#cc4400');
+    px(x+3,y+16,5,2,'#888888'); px(x+4,y+17,3,1,'#555555');
+  }
+
+  function drawExhaust(x,y) {
+    const f = frame%4;
+    const c1 = ['#ffffff','#ffff00','#ff8800','#ff4400'];
+    const c2 = ['#ffff00','#ff8800','#ff4400','#cc0000'];
+    px(x+4,y,3,5+f,c1[f]); px(x+3,y+1,5,4+f,c2[f]); px(x+5,y,1,8,c1[(f+2)%4]);
+    ctx.globalAlpha=0.25; px(x+2,y+2,7,6,'#ffff00'); ctx.globalAlpha=1;
+  }
+
+  function txt(s,x,y,c,size) {
+    ctx.fillStyle=c;
+    ctx.font=(size||6)+'px monospace';
+    ctx.fillText(s,x,y);
+  }
+
+  function drawSpace() {
+    for(let i=0;i<H;i++) {
+      const b = Math.floor(i/H*40+10);
+      px(0,i,W,1,`rgb(${Math.floor(i/H*8)},0,${b})`);
     }
   }
 
-  function drawRocket(x, y) {
-    // Body
-    ctx.fillStyle = '#e0e0e0';
-    ctx.beginPath();
-    ctx.roundRect(x - 14, y - 30, 28, 50, 5);
-    ctx.fill();
-
-    // Nose cone
-    ctx.fillStyle = '#cc3333';
-    ctx.beginPath();
-    ctx.moveTo(x, y - 55);
-    ctx.lineTo(x - 14, y - 30);
-    ctx.lineTo(x + 14, y - 30);
-    ctx.closePath();
-    ctx.fill();
-
-    // Window
-    ctx.fillStyle = '#4488ff';
-    ctx.beginPath();
-    ctx.arc(x, y - 10, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#aaccff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Fins
-    ctx.fillStyle = '#cc3333';
-    ctx.beginPath();
-    ctx.moveTo(x - 14, y + 10);
-    ctx.lineTo(x - 26, y + 35);
-    ctx.lineTo(x - 14, y + 20);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(x + 14, y + 10);
-    ctx.lineTo(x + 26, y + 35);
-    ctx.lineTo(x + 14, y + 20);
-    ctx.closePath();
-    ctx.fill();
-
-    // Flame
-    const flameSize = 12 + Math.sin(frame * 0.4) * 4;
-    const grad = ctx.createRadialGradient(x, y + 40, 0, x, y + 40, flameSize * 2);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(0.3, '#ffcc00');
-    grad.addColorStop(0.7, '#ff6600');
-    grad.addColorStop(1, 'rgba(255,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(x, y + 40 + flameSize * 0.4, flameSize * 0.5, flameSize, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function tick() {
-    ctx.clearRect(0, 0, W, H);
-
-    // Background
-    ctx.fillStyle = '#060612';
-    ctx.fillRect(0, 0, W, H);
-
-    // Stars
+  function drawStars() {
     stars.forEach(s => {
-      s.twinkle += 0.04;
-      ctx.fillStyle = `rgba(255,255,255,${0.4 + Math.sin(s.twinkle) * 0.3})`;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
+      px(s.x,s.y,1,1,(frame+s.t)%8<4?s.c:'#111133');
     });
+  }
 
-    // Launch countdown then go
-    if (frame < 60) {
-      // Countdown
-      const count = 3 - Math.floor(frame / 20);
-      ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.sin(frame * 0.2) * 0.2})`;
-      ctx.font = 'bold 48px -apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(count > 0 ? count : '🚀', W / 2, 80);
-    } else {
-      launched = true;
+  function drawCount() {
+    drawSpace(); drawStars();
+    // Planet
+    const pr=20,ppx=148,ppy=38;
+    for(let dy=-pr;dy<=pr;dy++) for(let dx=-pr;dx<=pr;dx++) {
+      if(dx*dx+dy*dy<=pr*pr) {
+        const d=Math.sqrt(dx*dx+dy*dy)/pr;
+        px(ppx+dx,ppy+dy,1,1,d<0.35?'#ff9900':d<0.65?'#ff6600':d<0.85?'#cc3300':'#991100');
+      }
     }
-
-    if (launched) {
-      rocketY -= 5 + (frame - 60) * 0.15;
-      if (frame % 2 === 0) spawnParticles(W / 2, rocketY);
+    for(let i=-26;i<=26;i++) if(Math.abs(i)>18) { px(ppx+i,ppy,1,1,'#ffbb44'); px(ppx+i,ppy+1,1,1,'#ff8800'); }
+    // Moon
+    for(let dy=-8;dy<=8;dy++) for(let dx=-8;dx<=8;dx++) {
+      if(dx*dx+dy*dy<=64) px(30+dx,55+dy,1,1,dx<0?'#888888':'#cccccc');
     }
-
-    // Particles
-    particles.forEach((p, i) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 0.04;
-      if (p.life <= 0) { particles.splice(i, 1); return; }
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+    // Ground
+    px(0,152,W,28,'#003300'); px(0,152,W,3,'#004400');
+    for(let i=0;i<W;i+=10) px(i,153,5,1,'#005500');
+    // Buildings
+    [[10,130,18,22,'#222244'],[34,140,12,12,'#1a1a3a'],[160,125,22,27,'#222244'],[188,138,14,14,'#1a1a3a']].forEach(([x,y,w,h,c]) => {
+      px(x,y,w,h,c);
+      for(let wy=y+2;wy<y+h-2;wy+=4) for(let wx=x+2;wx<x+w-2;wx+=4)
+        px(wx,wy,2,2,(frame+wx+wy)%7<3?'#ffff44':'#222244');
     });
-
-    // Launch pad
-    if (!launched || rocketY > H - 80) {
-      ctx.fillStyle = '#444';
-      ctx.fillRect(W / 2 - 40, H - 45, 80, 8);
-      ctx.fillRect(W / 2 - 5, H - 70, 10, 30);
+    // Pad
+    px(82,142,36,12,'#666666'); px(85,138,30,6,'#888888'); px(88,135,24,5,'#aaaaaa');
+    px(82,153,6,3,'#ff3300'); px(112,153,6,3,'#ff3300');
+    px(84,135,3,8,'#444444'); px(113,135,3,8,'#444444');
+    // Rocket
+    drawRocket(90,114);
+    // Smoke
+    if(frame>18) {
+      const sc=['#aaaaaa','#888888','#cccccc','#dddddd'];
+      for(let i=0;i<5;i++) { const sx=86+((frame*2+i*16)%24)-6; px(sx,148-i*3,4,4,sc[i%4]); }
     }
+    if(frame>30) drawExhaust(90,132);
+    // HUD
+    px(0,0,W,14,'#000011'); px(0,166,W,14,'#000011');
+    ctx.strokeStyle='#6600cc'; ctx.lineWidth=1; ctx.strokeRect(0,0,W,14); ctx.strokeRect(0,166,W,14);
+    txt('TOTANGO MISSION',8,10,'#00ffff',5);
+    const cnt = 3-Math.floor(frame/22)|0;
+    if(cnt>0) { px(82,68,36,30,'#00000099'); txt('T-'+cnt,90,88,'#ffff00',12); }
+    else { px(60,68,80,24,'#00000099'); txt('LAUNCH!',66,85,'#ff4444',9); }
+    txt('* PRESS START *',44,174,'#aa88ff',5);
+    if(frame>=88) phase='launch';
+  }
 
-    drawRocket(W / 2, Math.min(rocketY, H - 80));
+  function drawLaunch() {
+    drawSpace();
+    stars.forEach(s=>{s.y+=2.2;if(s.y>H)s.y=0;px(s.x,s.y,1,1,s.c);});
+    ry -= 2.8+(frame-88)*0.1;
+    for(let i=0;i<4;i++) exP.push({
+      x:92+(Math.random()-.5)*8, y:ry+18,
+      vx:(Math.random()-.5)*1.5, vy:2.5+Math.random()*3, life:8+Math.random()*6,
+      c:['#ffffff','#ffff00','#ff8800','#ff5500','#ff2200'][Math.random()*5|0]
+    });
+    exP.forEach(ep=>{ep.x+=ep.vx;ep.y+=ep.vy;ep.life--;if(ep.life>0)px(ep.x,ep.y,2,2,ep.c);});
+    exP=exP.filter(ep=>ep.life>0);
+    if(frame>106) {
+      const lc=['#00ffff','#ff88ff','#ffff00','#88ff88','#ff8800','#ffffff'];
+      for(let i=0;i<6;i++) { const lx=(i*34+frame*7)%W; px(lx,ry+4+i*3,10+i*2,1,lc[i]); }
+    }
+    if(ry>-25) { drawRocket(90,ry); drawExhaust(90,ry+18); }
+    px(0,0,W,14,'#000011'); px(0,166,W,14,'#000011');
+    ctx.strokeStyle='#ff2244'; ctx.lineWidth=1; ctx.strokeRect(0,0,W,14);
+    txt('TOTANGO',6,10,'#00ffff',5);
+    txt(Math.min(99999,(frame-88)*180)|0+'',90,10,'#ffff00',5);
+    txt('* LAUNCHING *',48,174,'#ff8800',5);
+    if(ry<-35){phase='warp';frame=0;}
+  }
 
-    frame++;
-
-    // Close after rocket exits screen
-    if (rocketY < -100) {
+  function drawWarp() {
+    px(0,0,W,H,'#000000');
+    if(frame<4) wL=Array.from({length:32},(_,i)=>({
+      x:W/2,y:H/2,a:Math.random()*Math.PI*2,sp:3+Math.random()*6,len:2,
+      c:['#00ffff','#ff00ff','#ffff00','#ffffff','#88ffff','#ff88ff','#ffff88','#ff8800'][i%8]
+    }));
+    wL.forEach(l=>{
+      l.len+=l.sp;
+      ctx.strokeStyle=l.c; ctx.lineWidth=1; ctx.beginPath();
+      ctx.moveTo(l.x+Math.cos(l.a)*(l.len-l.sp),l.y+Math.sin(l.a)*(l.len-l.sp));
+      ctx.lineTo(l.x+Math.cos(l.a)*l.len,l.y+Math.sin(l.a)*l.len); ctx.stroke();
+    });
+    if(frame>28) {
+      px(30,56,140,56,'#000000');
+      ctx.strokeStyle='#00ffff'; ctx.lineWidth=1; ctx.strokeRect(30,56,140,56);
+      ctx.strokeStyle='#ff00ff'; ctx.strokeRect(32,58,136,52);
+      txt('TOTANGO',42,76,'#00ffff',8);
+      txt('OPENING...',42,92,'#ffff00',6);
+      txt('.'.repeat((frame-28)%8),124,92,'#ff88ff',6);
+    }
+    if(frame>60){
       cancelAnimationFrame(raf);
-      overlay.style.transition = 'opacity 0.4s';
-      overlay.style.opacity = '0';
-      setTimeout(() => { overlay.remove(); callback(); }, 400);
+      overlay.style.transition='opacity 0.4s';
+      overlay.style.opacity='0';
+      setTimeout(()=>{overlay.remove();callback();},420);
       return;
     }
-
-    raf = requestAnimationFrame(tick);
   }
 
   // 8-bit rocket sound
   try {
-    const actx = new (window.AudioContext || window.webkitAudioContext)();
-    const t = actx.currentTime;
-    // Rumble
-    const noise = actx.createOscillator();
-    const gain  = actx.createGain();
-    noise.connect(gain); gain.connect(actx.destination);
-    noise.type = 'sawtooth';
-    noise.frequency.setValueAtTime(80, t);
-    noise.frequency.linearRampToValueAtTime(200, t + 2);
-    gain.gain.setValueAtTime(0.08, t);
-    gain.gain.linearRampToValueAtTime(0, t + 2);
-    noise.start(t); noise.stop(t + 2);
-    // Ascending beeps
-    [440, 550, 660, 880, 1100].forEach((f, i) => {
-      const o = actx.createOscillator();
-      const g = actx.createGain();
-      o.connect(g); g.connect(actx.destination);
-      o.type = 'square'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.06, t + i * 0.12);
-      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.15);
-      o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.2);
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const t = ac.currentTime;
+    const rumble = ac.createOscillator(); const rg = ac.createGain();
+    rumble.connect(rg); rg.connect(ac.destination);
+    rumble.type='sawtooth'; rumble.frequency.setValueAtTime(60,t); rumble.frequency.linearRampToValueAtTime(200,t+2.5);
+    rg.gain.setValueAtTime(0.07,t); rg.gain.linearRampToValueAtTime(0,t+2.5);
+    rumble.start(t); rumble.stop(t+2.5);
+    [330,440,550,660,880,1100].forEach((f,i)=>{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.connect(g);g.connect(ac.destination);
+      o.type='square';o.frequency.value=f;
+      g.gain.setValueAtTime(0.06,t+i*0.1);
+      g.gain.exponentialRampToValueAtTime(0.001,t+i*0.1+0.12);
+      o.start(t+i*0.1);o.stop(t+i*0.1+0.15);
     });
-  } catch(e) {}
+  } catch(e){}
 
+  function tick() {
+    ctx.clearRect(0,0,W,H);
+    if(phase==='count') drawCount();
+    else if(phase==='launch') drawLaunch();
+    else drawWarp();
+    frame++;
+    raf = requestAnimationFrame(tick);
+  }
   raf = requestAnimationFrame(tick);
 }
+
 
 function switchTab(tab) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -1328,7 +1324,197 @@ function closeDrilldown() {
 function drawPie() {}
 function renderLegend() {}
 
-// ── WEEKLY VIEW ───────────────────────────────────────────────────────────────
+// ── SEND TO TOTANGO ──────────────────────────────────────────────────────────
+
+// Set this after deploying your Cloudflare Worker
+const WORKER_URL = localStorage.getItem('cs_worker_url') || '';
+
+function getWorkerUrl() {
+  return localStorage.getItem('cs_worker_url') || '';
+}
+
+let selectedTotangoAccount = null;
+let totangoSearchTimeout   = null;
+
+function openSendToTotango() {
+  if (!generatedText) return;
+
+  // Pre-fill subject from companyName + type
+  const company = lastParsed?.companyName || pendingClient || '';
+  const type    = document.getElementById('tp-type')?.value || 'MS Teams meeting';
+  document.getElementById('tango-subject').value = company ? `${company} — ${type}` : type;
+
+  // Pre-fill search with company name
+  if (company) {
+    document.getElementById('tango-search').value = company;
+    searchTotangoAccounts();
+  }
+
+  document.getElementById('totango-modal').classList.add('open');
+  playSoundOpen();
+
+  // Prompt for worker URL if not set
+  if (!getWorkerUrl()) {
+    const url = prompt('Enter your Cloudflare Worker URL:\n(e.g. https://totango-proxy.your-name.workers.dev)');
+    if (url) localStorage.setItem('cs_worker_url', url.trim());
+    else { closeTotangoModal(); return; }
+  }
+}
+
+function closeTotangoModal() {
+  document.getElementById('totango-modal').classList.remove('open');
+  document.getElementById('tango-results').style.display = 'none';
+  document.getElementById('tango-send-btn').disabled = true;
+  selectedTotangoAccount = null;
+  playSoundClose();
+}
+
+function debounceTotangoSearch() {
+  clearTimeout(totangoSearchTimeout);
+  totangoSearchTimeout = setTimeout(searchTotangoAccounts, 400);
+}
+
+async function searchTotangoAccounts() {
+  const query = document.getElementById('tango-search').value.trim();
+  if (!query) return;
+
+  const workerUrl = getWorkerUrl();
+  if (!workerUrl) return;
+
+  const statusEl = document.getElementById('tango-status');
+  statusEl.textContent = 'Searching...';
+
+  try {
+    // Totango account search endpoint
+    const res = await fetch(`${workerUrl}/api/v1/search/accounts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        terms: [{ type: 'string_attribute', attribute: 'name', in_list: [query] }],
+        count: 10,
+        offset: 0,
+        fields: ['display_name', 'arr', 'health', 'contract_value']
+      })
+    });
+
+    const data = await res.json();
+    const accounts = data?.response?.accounts?.hits || [];
+
+    statusEl.textContent = '';
+    renderTotangoAccounts(accounts, query);
+
+  } catch(e) {
+    statusEl.textContent = '⚠ Search failed — check Worker URL';
+  }
+}
+
+function renderTotangoAccounts(accounts, query) {
+  const resultsEl = document.getElementById('tango-results');
+  const labelEl   = document.getElementById('tango-results-label');
+  const listEl    = document.getElementById('tango-accounts-list');
+
+  if (accounts.length === 0) {
+    labelEl.textContent = `No accounts found for "${query}"`;
+    listEl.innerHTML = '';
+    resultsEl.style.display = 'block';
+    return;
+  }
+
+  labelEl.textContent = `${accounts.length} result${accounts.length !== 1 ? 's' : ''}`;
+  listEl.innerHTML = accounts.map(acc => {
+    const name   = acc.display_name || acc.name || 'Unknown';
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const arr    = acc.arr ? `€${(acc.arr/1000).toFixed(0)}K` : '';
+    const health = acc.health?.score || '';
+    return `
+      <div class="tango-account-item" onclick="selectTotangoAccount(${JSON.stringify(JSON.stringify(acc))})">
+        <div class="tango-account-avatar">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div class="tango-account-name">${escHtml(name)}</div>
+          <div class="tango-account-meta">${arr}${arr && health ? ' · ' : ''}${health ? 'Health: '+health : ''}</div>
+        </div>
+        <i class="ti ti-chevron-right" style="font-size:14px;color:var(--text-3)" aria-hidden="true"></i>
+      </div>`;
+  }).join('');
+
+  resultsEl.style.display = 'block';
+}
+
+function selectTotangoAccount(accJson) {
+  const acc = JSON.parse(accJson);
+  selectedTotangoAccount = acc;
+
+  const name     = acc.display_name || acc.name || 'Unknown';
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const arr      = acc.arr ? `€${(acc.arr/1000).toFixed(0)}K` : '';
+
+  document.getElementById('tango-account-avatar').textContent = initials;
+  document.getElementById('tango-account-name').textContent   = name;
+  document.getElementById('tango-account-meta').textContent   = arr || acc.name || '';
+  document.getElementById('tango-selected-account').style.display = 'block';
+  document.getElementById('tango-results').style.display      = 'none';
+  document.getElementById('tango-send-btn').disabled          = false;
+  document.getElementById('tango-status').textContent         = '';
+  playSoundClick();
+}
+
+function clearTotangoAccount() {
+  selectedTotangoAccount = null;
+  document.getElementById('tango-selected-account').style.display = 'none';
+  document.getElementById('tango-send-btn').disabled = true;
+}
+
+async function sendTouchpointToTotango() {
+  if (!selectedTotangoAccount) return;
+
+  const workerUrl = getWorkerUrl();
+  const type      = document.getElementById('tango-type').value;
+  const subject   = document.getElementById('tango-subject').value.trim();
+  const content   = buildPlainText();
+  const statusEl  = document.getElementById('tango-status');
+  const btn       = document.getElementById('tango-send-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Sending...';
+  statusEl.textContent = '⏳ Creating touchpoint...';
+
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const payload = {
+      account_id:  selectedTotangoAccount.name || selectedTotangoAccount.id,
+      activity_type_id: type,
+      date:        today,
+      subject:     subject || 'CS Dashboard touchpoint',
+      content:     content,
+      total:       1
+    };
+
+    const res = await fetch(`${workerUrl}/api/v3/touchpoints/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (res.ok || data?.status === 'success') {
+      statusEl.textContent = '✓ Touchpoint created in Totango!';
+      statusEl.style.color = '#5DCAA5';
+      playDoneSound();
+      launchConfetti();
+      setTimeout(() => closeTotangoModal(), 1500);
+    } else {
+      throw new Error(data?.message || 'Unknown error');
+    }
+
+  } catch(e) {
+    statusEl.textContent = `⚠ Failed: ${e.message}`;
+    statusEl.style.color = '#f87171';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send"></i> Send to Totango';
+  }
+}
 
 function renderWeekly() {
   const todayStr = today();

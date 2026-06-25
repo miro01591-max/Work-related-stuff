@@ -148,6 +148,9 @@
               <button class="btn" onclick="copyTP()">
                 <i class="ti ti-copy"></i> Copy for Totango
               </button>
+              <button class="btn btn-tango" onclick="openSendToTotango()">
+                <i class="ti ti-send"></i> Send to Totango
+              </button>
               <button class="btn btn-success" onclick="addToBoard()">
                 <i class="ti ti-circle-plus"></i> Add to board
               </button>
@@ -407,6 +410,69 @@
   <div id="charizard-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:20px">
     <canvas id="charizard-canvas" width="360" height="80"></canvas>
     <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px" id="charizard-msg">GENERATING...</div>
+  </div>
+
+  <!-- SEND TO TOTANGO MODAL -->
+  <div class="modal-bg" id="totango-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h3><i class="ti ti-send" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Send to Totango</h3>
+        <button class="icon-btn" onclick="closeTotangoModal()" aria-label="Close"><i class="ti ti-x"></i></button>
+      </div>
+
+      <div class="field">
+        <label>Touchpoint type</label>
+        <select id="tango-type">
+          <option value="csat_follow_up">CSAT Follow Up</option>
+          <option value="email">Email</option>
+          <option value="in_person_meeting">In person meeting</option>
+          <option value="internal_note">Internal Note</option>
+          <option value="ms_teams_meeting" selected>MS Teams meeting</option>
+          <option value="telephone_call">Telephone call</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Search account</label>
+        <div style="display:flex;gap:8px">
+          <input id="tango-search" type="text" placeholder="Search by company name..." style="flex:1" oninput="debounceTotangoSearch()" />
+          <button class="btn btn-sm" onclick="searchTotangoAccounts()"><i class="ti ti-search"></i></button>
+        </div>
+      </div>
+
+      <div id="tango-results" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px" id="tango-results-label"></div>
+        <div id="tango-accounts-list"></div>
+      </div>
+
+      <div id="tango-selected-account" style="display:none;margin-bottom:12px">
+        <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <div id="tango-account-avatar" style="width:36px;height:36px;border-radius:50%;background:#0D9488;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:white;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div id="tango-account-name" style="font-size:13px;font-weight:500;color:var(--text)"></div>
+            <div id="tango-account-meta" style="font-size:11px;color:var(--text-3);margin-top:2px"></div>
+          </div>
+          <button class="icon-btn" onclick="clearTotangoAccount()" title="Change account"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="tango-subject">Subject</label>
+        <input id="tango-subject" type="text" placeholder="Touchpoint subject (max 255 chars)" maxlength="255" />
+      </div>
+
+      <div id="tango-status" style="font-size:12px;color:var(--text-3);min-height:18px;margin-bottom:8px"></div>
+
+      <div class="modal-footer">
+        <div></div>
+        <div class="modal-footer-right">
+          <button class="btn" onclick="closeTotangoModal()">Cancel</button>
+          <button class="btn btn-tango" id="tango-send-btn" onclick="sendTouchpointToTotango()" disabled>
+            <i class="ti ti-send"></i> Send to Totango
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
