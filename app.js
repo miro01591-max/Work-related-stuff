@@ -104,6 +104,9 @@ function openTotango() {
 }
 
 function launchRocket(callback) {
+  let called = false;
+  const once = () => { if (!called) { called = true; callback(); } };
+
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:#000011;z-index:99997;display:flex;align-items:center;justify-content:center';
 
@@ -262,7 +265,7 @@ function launchRocket(callback) {
       cancelAnimationFrame(raf);
       overlay.style.transition='opacity 0.4s';
       overlay.style.opacity='0';
-      setTimeout(()=>{overlay.remove();callback();},420);
+      setTimeout(()=>{overlay.remove();once();},420);
       return;
     }
   }
@@ -1327,10 +1330,10 @@ function renderLegend() {}
 // ── SEND TO TOTANGO ──────────────────────────────────────────────────────────
 
 // Set this after deploying your Cloudflare Worker
-const WORKER_URL = localStorage.getItem('cs_worker_url') || '';
+const WORKER_URL = 'https://totango-proxy.miro01591.workers.dev';
 
 function getWorkerUrl() {
-  return localStorage.getItem('cs_worker_url') || '';
+  return localStorage.getItem('cs_worker_url') || WORKER_URL;
 }
 
 let selectedTotangoAccount = null;
@@ -1352,13 +1355,6 @@ function openSendToTotango() {
 
   document.getElementById('totango-modal').classList.add('open');
   playSoundOpen();
-
-  // Prompt for worker URL if not set
-  if (!getWorkerUrl()) {
-    const url = prompt('Enter your Cloudflare Worker URL:\n(e.g. https://totango-proxy.your-name.workers.dev)');
-    if (url) localStorage.setItem('cs_worker_url', url.trim());
-    else { closeTotangoModal(); return; }
-  }
 }
 
 function closeTotangoModal() {
@@ -1383,18 +1379,15 @@ async function searchTotangoAccounts() {
 
   const statusEl = document.getElementById('tango-status');
   statusEl.textContent = 'Searching...';
+  statusEl.style.color = 'var(--text-3)';
 
   try {
-    // Totango account search endpoint
-    const res = await fetch(`${workerUrl}/api/v1/search/accounts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        terms: [{ type: 'string_attribute', attribute: 'name', in_list: [query] }],
-        count: 10,
-        offset: 0,
-        fields: ['display_name', 'arr', 'health', 'contract_value']
-      })
+    // Totango uses form-encoded search query
+    const searchQuery = `?q=(type:("account")) AND (name:("${query}"))&count=10&offset=0&fields=["display_name","arr","health","name","contract_value"]`;
+
+    const res = await fetch(`${workerUrl}/api/v1/search/accounts${encodeURIComponent(searchQuery)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
 
     const data = await res.json();
@@ -1404,7 +1397,21 @@ async function searchTotangoAccounts() {
     renderTotangoAccounts(accounts, query);
 
   } catch(e) {
-    statusEl.textContent = '⚠ Search failed — check Worker URL';
+    // Try alternative endpoint format
+    try {
+      const res2 = await fetch(`${workerUrl}/api/v1/search/accounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `q=(type:("account")) AND (display_name:("${query}"))&count=10&offset=0`
+      });
+      const data2 = await res2.json();
+      const accounts2 = data2?.response?.accounts?.hits || [];
+      statusEl.textContent = '';
+      renderTotangoAccounts(accounts2, query);
+    } catch(e2) {
+      statusEl.textContent = '⚠ Search failed — check Worker URL';
+      statusEl.style.color = '#f87171';
+    }
   }
 }
 
