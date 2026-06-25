@@ -1016,67 +1016,132 @@ function renderWeekly() {
   sunday.setDate(monday.getDate() + 6);
 
   const fmt = d => d.toISOString().split('T')[0];
-  const mondayStr = fmt(monday);
   const sundayStr = fmt(sunday);
 
-  const weekLabel = `Week of ${monday.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} – ${sunday.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
-  document.getElementById('weekly-title').textContent = `Weekly Overview — ${weekLabel}`;
+  const weekLabel = `${monday.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} – ${sunday.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
+  document.getElementById('weekly-title').textContent = `Week of ${weekLabel}`;
 
-  const overdue   = tasks.filter(t => t.status !== 'done' && t.due && t.due < todayStr);
-  const thisWeek  = tasks.filter(t => t.status !== 'done' && t.due && t.due >= todayStr && t.due <= sundayStr);
+  const overdue    = tasks.filter(t => t.status !== 'done' && t.due && t.due < todayStr);
+  const thisWeek   = tasks.filter(t => t.status !== 'done' && t.due && t.due >= todayStr && t.due <= sundayStr);
   const logTotango = tasks.filter(t => t.status === 'logtotango');
-  const stuck     = tasks.filter(t => {
+  const stuck      = tasks.filter(t => {
     if (t.status === 'done') return false;
     const moved = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || 0);
     return Math.floor((Date.now() - moved) / 864e5) >= 5;
+  }).sort((a, b) => {
+    const daysA = Math.floor((Date.now() - new Date(a.movedAt || a.createdAt || 0)) / 864e5);
+    const daysB = Math.floor((Date.now() - new Date(b.movedAt || b.createdAt || 0)) / 864e5);
+    return daysB - daysA; // most stuck first
   });
 
   const grid = document.getElementById('weekly-grid');
   grid.innerHTML = '';
 
+  // Top summary row
+  const summary = document.createElement('div');
+  summary.className = 'weekly-summary-row';
+  summary.innerHTML = `
+    <div class="weekly-summary-card ${overdue.length > 0 ? 'ws-red' : 'ws-green'}">
+      <div class="ws-num">${overdue.length}</div>
+      <div class="ws-lbl">Overdue</div>
+    </div>
+    <div class="weekly-summary-card ws-amber">
+      <div class="ws-num">${thisWeek.length}</div>
+      <div class="ws-lbl">Due this week</div>
+    </div>
+    <div class="weekly-summary-card ws-teal">
+      <div class="ws-num">${logTotango.length}</div>
+      <div class="ws-lbl">To log in Totango</div>
+    </div>
+    <div class="weekly-summary-card ws-purple">
+      <div class="ws-num">${stuck.length}</div>
+      <div class="ws-lbl">Stuck 5+ days</div>
+    </div>
+  `;
+  grid.appendChild(summary);
+
+  // Sections — only show non-empty or with clear message
   const sections = [
-    { title: 'Overdue', icon: 'ti-alert-circle', color: '#f87171', items: overdue },
-    { title: 'Due this week', icon: 'ti-calendar-due', color: '#EF9F27', items: thisWeek },
-    { title: 'Waiting to log in Totango', icon: 'ti-external-link', color: '#0D9488', items: logTotango },
-    { title: 'Stuck (5+ days in same column)', icon: 'ti-clock', color: '#9060ee', items: stuck },
+    { title: 'Overdue', icon: 'ti-alert-circle', color: '#f87171', items: overdue, limit: 10 },
+    { title: 'Due this week', icon: 'ti-calendar-due', color: '#EF9F27', items: thisWeek, limit: 10 },
+    { title: 'To log in Totango', icon: 'ti-external-link', color: '#0D9488', items: logTotango, limit: 10 },
+    { title: 'Stuck 5+ days', icon: 'ti-clock', color: '#9060ee', items: stuck, limit: 5 },
   ];
 
   sections.forEach(sec => {
+    if (sec.items.length === 0) return; // skip empty sections
+
     const div = document.createElement('div');
     div.className = 'weekly-section';
-    div.innerHTML = `<div class="weekly-section-title"><i class="ti ${sec.icon}" style="color:${sec.color}" aria-hidden="true"></i>${sec.title} <span style="color:${sec.color};font-weight:700">${sec.items.length}</span></div>`;
 
-    if (sec.items.length === 0) {
-      div.innerHTML += `<div class="weekly-empty">All clear ✓</div>`;
-    } else {
-      // Group by client
-      const byClient = {};
-      sec.items.forEach(t => {
-        const c = t.client || 'No client';
-        if (!byClient[c]) byClient[c] = [];
-        byClient[c].push(t);
-      });
-      Object.entries(byClient).forEach(([client, clientTasks]) => {
-        const g = document.createElement('div');
-        g.className = 'weekly-client-group';
-        g.innerHTML = `<div class="weekly-client-name">${escHtml(client)}</div>`;
-        clientTasks.forEach(t => {
+    // Header
+    div.innerHTML = `
+      <div class="weekly-section-title">
+        <i class="ti ${sec.icon}" style="color:${sec.color}" aria-hidden="true"></i>
+        ${sec.title}
+        <span class="ws-count" style="background:${sec.color}22;color:${sec.color}">${sec.items.length}</span>
+      </div>`;
+
+    // Show items — flat list, no client grouping for cleaner look
+    const shown = sec.items.slice(0, sec.limit);
+    shown.forEach(t => {
+      const dl = dueLabel(t.due);
+      const moved = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || 0);
+      const daysStuck = Math.floor((Date.now() - moved) / 864e5);
+      const row = document.createElement('div');
+      row.className = 'weekly-task-row';
+      row.innerHTML = `
+        <span class="tag ${TAG_CLASSES[t.tag] || 't-support'}">${t.tag}</span>
+        <div class="weekly-task-info">
+          <div class="weekly-task-title">${escHtml(t.title.slice(0, 55))}${t.title.length > 55 ? '...' : ''}</div>
+          ${t.client ? `<div class="weekly-task-client">${escHtml(t.client)}</div>` : ''}
+        </div>
+        ${sec.title.includes('Stuck') ? `<span class="weekly-stuck-days">${daysStuck}d</span>` : ''}
+        ${dl ? `<span class="weekly-due${dl.over ? ' over' : ''}">${dl.text}</span>` : ''}
+      `;
+      row.onclick = () => { openDetail(t.id); playSoundClick(); };
+      div.appendChild(row);
+    });
+
+    // Show more button if truncated
+    if (sec.items.length > sec.limit) {
+      const more = document.createElement('div');
+      more.className = 'weekly-show-more';
+      more.textContent = `+ ${sec.items.length - sec.limit} more`;
+      more.onclick = () => {
+        sec.items.slice(sec.limit).forEach(t => {
           const dl = dueLabel(t.due);
+          const moved = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || 0);
+          const daysStuck = Math.floor((Date.now() - moved) / 864e5);
           const row = document.createElement('div');
           row.className = 'weekly-task-row';
           row.innerHTML = `
             <span class="tag ${TAG_CLASSES[t.tag] || 't-support'}">${t.tag}</span>
-            <span style="flex:1;font-size:12px;color:var(--text-2)">${escHtml(t.title.slice(0, 60))}${t.title.length > 60 ? '...' : ''}</span>
+            <div class="weekly-task-info">
+              <div class="weekly-task-title">${escHtml(t.title.slice(0, 55))}${t.title.length > 55 ? '...' : ''}</div>
+              ${t.client ? `<div class="weekly-task-client">${escHtml(t.client)}</div>` : ''}
+            </div>
+            ${sec.title.includes('Stuck') ? `<span class="weekly-stuck-days">${daysStuck}d</span>` : ''}
             ${dl ? `<span class="weekly-due${dl.over ? ' over' : ''}">${dl.text}</span>` : ''}
           `;
-          row.onclick = () => openDetail(t.id);
-          g.appendChild(row);
+          row.onclick = () => { openDetail(t.id); playSoundClick(); };
+          div.insertBefore(row, more);
         });
-        div.appendChild(g);
-      });
+        more.remove();
+      };
+      div.appendChild(more);
     }
+
     grid.appendChild(div);
   });
+
+  // If everything is clear
+  if (overdue.length === 0 && thisWeek.length === 0 && logTotango.length === 0 && stuck.length === 0) {
+    const clear = document.createElement('div');
+    clear.className = 'weekly-all-clear';
+    clear.innerHTML = `<i class="ti ti-circle-check" style="font-size:32px;color:#16A34A" aria-hidden="true"></i><div>All clear — great week! 🎉</div>`;
+    grid.appendChild(clear);
+  }
 }
 
 // ── CLIENT VIEW ───────────────────────────────────────────────────────────────
@@ -1166,22 +1231,20 @@ function trackTokens(usage) {
 
 function updateTokenDisplay() {
   const total = sessionTokens.input + sessionTokens.output;
-  // Sonnet 4.6: $3/1M input, $15/1M output
   const cost = (sessionTokens.input / 1_000_000 * 3) + (sessionTokens.output / 1_000_000 * 15);
 
-  const el = document.getElementById('token-display');
-  if (!el) return;
+  let color = '#5DCAA5';
+  if (cost > 0.10) color = '#EF9F27';
+  if (cost > 0.50) color = '#f87171';
 
-  // Color by cost
-  let color = '#5DCAA5'; // green — cheap
-  if (cost > 0.10) color = '#EF9F27'; // amber
-  if (cost > 0.50) color = '#F09595'; // red
+  const counter = document.getElementById('token-display');
+  const numEl   = document.getElementById('token-num');
+  const costEl  = document.getElementById('token-cost');
+  if (!counter || !numEl || !costEl) return;
 
-  el.innerHTML = `
-    <span style="color:${color};font-weight:600">${total.toLocaleString()}</span>
-    <span style="color:rgba(255,255,255,0.3);font-size:10px">tokens</span>
-    <span style="color:${color};font-size:10px">~$${cost.toFixed(3)}</span>
-  `;
+  counter.style.color = color;
+  numEl.textContent   = total.toLocaleString();
+  costEl.textContent  = `$${cost.toFixed(3)}`;
 }
 
 let recognition = null;
