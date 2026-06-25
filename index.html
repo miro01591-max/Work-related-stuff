@@ -271,12 +271,24 @@
   <div class="modal-bg" id="det-modal">
     <div class="modal">
       <div class="modal-header">
-        <input class="det-title-input" id="det-title" type="text" placeholder="Task title..." />
+        <div class="det-title-wrap">
+          <input class="det-title-input" id="det-title" type="text" placeholder="Task title..." />
+          <button class="field-mic-btn" onclick="fieldSpeech('det-title')" title="Speak title"><i class="ti ti-microphone"></i></button>
+        </div>
         <button class="icon-btn" onclick="closeDetail()" aria-label="Close"><i class="ti ti-x"></i></button>
       </div>
+
+      <button class="voice-fill-btn" id="voice-fill-btn" onclick="voiceFillTask()">
+        <i class="ti ti-microphone"></i> Fill entire task by voice
+      </button>
+      <div class="voice-fill-status" id="voice-fill-status"></div>
+
       <div class="field">
         <label for="det-client-input">Client</label>
-        <input id="det-client-input" type="text" placeholder="Client name" />
+        <div class="field-with-mic">
+          <input id="det-client-input" type="text" placeholder="Client name" />
+          <button class="field-mic-btn" onclick="fieldSpeech('det-client-input')" title="Speak client name"><i class="ti ti-microphone"></i></button>
+        </div>
       </div>
       <div class="field">
         <label>Status</label>
@@ -284,7 +296,10 @@
       </div>
       <div class="field">
         <label for="det-note">Notes / touchpoint</label>
-        <textarea id="det-note" rows="5"></textarea>
+        <div class="field-with-mic">
+          <textarea id="det-note" rows="5"></textarea>
+          <button class="field-mic-btn field-mic-textarea" onclick="fieldSpeech('det-note')" title="Speak notes"><i class="ti ti-microphone"></i></button>
+        </div>
       </div>
       <div class="field">
         <label for="det-due">Due date</label>

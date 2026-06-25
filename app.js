@@ -1570,67 +1570,213 @@ function updateTokenDisplay() {
 let recognition = null;
 let isRecording = false;
 
-function initSpeech() {
+function initSpeech(opts = {}) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return null;
   const r = new SpeechRecognition();
-  r.continuous = false;
-  r.interimResults = true;
-  r.lang = 'en-US';
+  r.continuous      = opts.continuous      ?? true;
+  r.interimResults  = opts.interimResults  ?? true;
+  r.lang            = opts.lang            ?? 'de-DE';
+  r.maxAlternatives = 1;
 
-  r.onstart = () => {
-    console.log('[Speech] Started listening');
-    document.getElementById('speech-input').placeholder = '🎤 Listening... speak now';
-  };
-
-  r.onspeechstart = () => {
-    console.log('[Speech] Speech detected');
-    document.getElementById('speech-input').placeholder = '🎤 Speech detected...';
-  };
-
-  r.onresult = e => {
-    console.log('[Speech] Got result', e.results);
+  r.onstart      = () => { if (opts.onStart) opts.onStart(); };
+  r.onspeechstart = () => {};
+  r.onresult     = e => {
     const transcript = [...e.results].map(r => r[0].transcript).join('');
-    console.log('[Speech] Transcript:', transcript);
-    document.getElementById('speech-input').value = transcript;
+    if (opts.onResult) opts.onResult(transcript, e.results[e.results.length-1].isFinal);
+    else { const inp = document.getElementById('speech-input'); if (inp) inp.value = transcript; }
   };
-
-  r.onnomatch = () => {
-    console.log('[Speech] No match');
-    document.getElementById('speech-input').placeholder = 'No match — try speaking more clearly';
-    setTimeout(() => { document.getElementById('speech-input').placeholder = 'Type or speak a task...'; }, 3000);
-  };
-
+  r.onnomatch = () => { if (opts.onEnd) opts.onEnd(''); };
   r.onend = () => {
-    console.log('[Speech] Ended');
     isRecording = false;
     updateMicBtn();
-    const val = document.getElementById('speech-input').value.trim();
-    if (val) {
-      // Auto-submit to Claude after a short delay
-      setTimeout(() => speechAddTask(), 400);
-    } else {
-      document.getElementById('speech-input').placeholder = 'Type or speak a task...';
+    if (opts.onEnd) opts.onEnd(null);
+    else {
+      const val = document.getElementById('speech-input')?.value?.trim();
+      if (val) setTimeout(() => speechAddTask(), 400);
+      else { const inp = document.getElementById('speech-input'); if(inp) inp.placeholder = 'Type or speak a task...'; }
     }
   };
-
   r.onerror = e => {
-    console.log('[Speech] Error:', e.error, e.message);
     isRecording = false;
     updateMicBtn();
-    const input = document.getElementById('speech-input');
-    if (e.error === 'not-allowed') {
-      input.placeholder = '⚠ Microphone access denied — allow it in your browser settings';
-    } else if (e.error === 'no-speech') {
-      input.placeholder = 'No speech detected — try again';
-      setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
-    } else {
-      input.placeholder = `Error: ${e.error} — try again`;
-      setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000);
+    if (opts.onError) opts.onError(e.error);
+    else {
+      const input = document.getElementById('speech-input');
+      if (!input) return;
+      if (e.error === 'not-allowed') input.placeholder = '⚠ Microphone access denied';
+      else { input.placeholder = `⚠ ${e.error}`; setTimeout(() => { input.placeholder = 'Type or speak a task...'; }, 3000); }
     }
   };
-
   return r;
+}
+
+// ── FIELD SPEECH — mic on individual form fields ──────────────────────────────
+
+let fieldRecognition = null;
+let activeFieldId    = null;
+
+function fieldSpeech(fieldId) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { alert('Speech not supported in this browser.'); return; }
+
+  // Stop if already recording this field
+  if (fieldRecognition && activeFieldId === fieldId) {
+    fieldRecognition.stop(); fieldRecognition = null; activeFieldId = null;
+    document.querySelectorAll('.field-mic-btn').forEach(b => b.classList.remove('recording'));
+    return;
+  }
+
+  // Stop any existing
+  if (fieldRecognition) { fieldRecognition.stop(); }
+  activeFieldId = fieldId;
+
+  const btn = document.querySelector(`[onclick="fieldSpeech('${fieldId}')"]`);
+  document.querySelectorAll('.field-mic-btn').forEach(b => b.classList.remove('recording'));
+  if (btn) btn.classList.add('recording');
+
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  fieldRecognition = initSpeech({
+    continuous: true,
+    lang: 'de-DE',
+    onResult: (transcript) => {
+      field.value = transcript;
+      field.dispatchEvent(new Event('input'));
+    },
+    onEnd: () => {
+      if (btn) btn.classList.remove('recording');
+      activeFieldId = null; fieldRecognition = null;
+    },
+    onError: () => {
+      if (btn) btn.classList.remove('recording');
+      activeFieldId = null; fieldRecognition = null;
+    }
+  });
+
+  try { fieldRecognition.start(); } catch(e) { fieldRecognition = null; }
+}
+
+// ── VOICE FILL TASK — fill entire task by voice + Claude ──────────────────────
+
+let voiceFillRec = null;
+
+async function voiceFillTask() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { alert('Speech not supported in this browser.'); return; }
+
+  const btn    = document.getElementById('voice-fill-btn');
+  const status = document.getElementById('voice-fill-status');
+
+  // Stop if recording
+  if (voiceFillRec) {
+    voiceFillRec.stop(); voiceFillRec = null;
+    btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+    btn.classList.remove('recording');
+    return;
+  }
+
+  btn.innerHTML = '<i class="ti ti-microphone-off"></i> Recording... click to stop';
+  btn.classList.add('recording');
+  status.textContent = '🎤 Speak: title, client, status, notes, due date...';
+
+  let fullTranscript = '';
+
+  voiceFillRec = initSpeech({
+    continuous: true,
+    lang: 'de-DE',
+    onResult: (transcript) => {
+      fullTranscript = transcript;
+      status.textContent = `🎤 "${transcript.slice(0, 60)}${transcript.length > 60 ? '...' : ''}"`;
+    },
+    onEnd: async () => {
+      btn.innerHTML = '<i class="ti ti-loader"></i> Claude is filling...';
+      btn.classList.remove('recording');
+      voiceFillRec = null;
+
+      if (!fullTranscript.trim()) {
+        status.textContent = '⚠ No speech detected.';
+        btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+        return;
+      }
+
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        document.getElementById('apikey-modal').classList.add('open');
+        btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+        status.textContent = '';
+        return;
+      }
+
+      status.textContent = '⏳ Analysing...';
+      const todayStr = today();
+
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 400,
+            messages: [{ role: 'user', content: `You are a Customer Success assistant. Parse this voice input into a task. Today: ${todayStr}.
+
+Voice: "${fullTranscript}"
+
+Return ONLY valid JSON:
+{
+  "title": "short task title max 70 chars",
+  "client": "company name only, empty if not mentioned",
+  "status": "one of: todo, waiting, inprogress, logtotango, done, specialcare",
+  "note": "any extra context from the voice input",
+  "due": "YYYY-MM-DD if date mentioned, else empty"
+}
+
+Rules: status=waiting if waiting for response, specialcare if urgent/critical, todo otherwise. Calculate due from today (${todayStr}). Respond in the language of the voice input.` }]
+          })
+        });
+        const data = await res.json();
+        trackTokens(data.usage);
+        const parsed = JSON.parse(data.content?.[0]?.text?.replace(/```json|```/g, '').trim() || '{}');
+
+        if (parsed.title)  document.getElementById('det-title').value       = parsed.title;
+        if (parsed.client) document.getElementById('det-client-input').value = parsed.client;
+        if (parsed.note)   document.getElementById('det-note').value         = parsed.note;
+        if (parsed.due)    document.getElementById('det-due').value          = parsed.due;
+
+        // Set status
+        if (parsed.status) {
+          const row = document.getElementById('det-status-row');
+          const btns = row.querySelectorAll('.sbtn');
+          btns.forEach(b => b.classList.remove('active'));
+          const idx = COLS.findIndex(c => c.id === parsed.status);
+          if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
+        }
+
+        status.textContent = '✓ All fields filled!';
+        playAddSound();
+        setTimeout(() => { status.textContent = ''; }, 3000);
+
+      } catch(e) {
+        status.textContent = '⚠ Error parsing — try again.';
+      }
+
+      btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+    },
+    onError: (err) => {
+      btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice';
+      btn.classList.remove('recording');
+      voiceFillRec = null;
+      status.textContent = `⚠ ${err}`;
+    }
+  });
+
+  try { voiceFillRec.start(); } catch(e) { voiceFillRec = null; btn.innerHTML = '<i class="ti ti-microphone"></i> Fill entire task by voice'; }
 }
 
 function updateMicBtn() {
