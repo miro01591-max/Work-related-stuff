@@ -98,7 +98,208 @@ function updateHeaderStats() {
 
 function openTotango() {
   playSoundClick();
-  window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
+  launchRocket(() => {
+    window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
+  });
+}
+
+function launchRocket(callback) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99997;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 300; canvas.height = 400;
+  canvas.style.cssText = 'display:block';
+
+  const msg = document.createElement('div');
+  msg.style.cssText = 'font-family:-apple-system,sans-serif;font-size:13px;color:rgba(255,255,255,0.5);letter-spacing:.08em';
+  msg.textContent = 'LAUNCHING TOTANGO...';
+
+  overlay.appendChild(canvas);
+  overlay.appendChild(msg);
+  document.body.appendChild(overlay);
+
+  const ctx = canvas.getContext('2d');
+  const W = 300, H = 400;
+  let frame = 0;
+  let rocketY = H - 80;
+  let launched = false;
+  let raf;
+
+  // Stars
+  const stars = Array.from({length: 60}, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    r: Math.random() * 1.5 + 0.3,
+    twinkle: Math.random() * Math.PI * 2
+  }));
+
+  // Flame particles
+  const particles = [];
+
+  function spawnParticles(rx, ry) {
+    for (let i = 0; i < 4; i++) {
+      particles.push({
+        x: rx + (Math.random() - 0.5) * 10,
+        y: ry + 40,
+        vx: (Math.random() - 0.5) * 2,
+        vy: 2 + Math.random() * 3,
+        life: 1,
+        r: 4 + Math.random() * 6,
+        color: Math.random() > 0.5 ? '#ff6600' : '#ffcc00'
+      });
+    }
+  }
+
+  function drawRocket(x, y) {
+    // Body
+    ctx.fillStyle = '#e0e0e0';
+    ctx.beginPath();
+    ctx.roundRect(x - 14, y - 30, 28, 50, 5);
+    ctx.fill();
+
+    // Nose cone
+    ctx.fillStyle = '#cc3333';
+    ctx.beginPath();
+    ctx.moveTo(x, y - 55);
+    ctx.lineTo(x - 14, y - 30);
+    ctx.lineTo(x + 14, y - 30);
+    ctx.closePath();
+    ctx.fill();
+
+    // Window
+    ctx.fillStyle = '#4488ff';
+    ctx.beginPath();
+    ctx.arc(x, y - 10, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#aaccff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Fins
+    ctx.fillStyle = '#cc3333';
+    ctx.beginPath();
+    ctx.moveTo(x - 14, y + 10);
+    ctx.lineTo(x - 26, y + 35);
+    ctx.lineTo(x - 14, y + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + 14, y + 10);
+    ctx.lineTo(x + 26, y + 35);
+    ctx.lineTo(x + 14, y + 20);
+    ctx.closePath();
+    ctx.fill();
+
+    // Flame
+    const flameSize = 12 + Math.sin(frame * 0.4) * 4;
+    const grad = ctx.createRadialGradient(x, y + 40, 0, x, y + 40, flameSize * 2);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#ffcc00');
+    grad.addColorStop(0.7, '#ff6600');
+    grad.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 40 + flameSize * 0.4, flameSize * 0.5, flameSize, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#060612';
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    stars.forEach(s => {
+      s.twinkle += 0.04;
+      ctx.fillStyle = `rgba(255,255,255,${0.4 + Math.sin(s.twinkle) * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Launch countdown then go
+    if (frame < 60) {
+      // Countdown
+      const count = 3 - Math.floor(frame / 20);
+      ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.sin(frame * 0.2) * 0.2})`;
+      ctx.font = 'bold 48px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(count > 0 ? count : '🚀', W / 2, 80);
+    } else {
+      launched = true;
+    }
+
+    if (launched) {
+      rocketY -= 5 + (frame - 60) * 0.15;
+      if (frame % 2 === 0) spawnParticles(W / 2, rocketY);
+    }
+
+    // Particles
+    particles.forEach((p, i) => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.04;
+      if (p.life <= 0) { particles.splice(i, 1); return; }
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    // Launch pad
+    if (!launched || rocketY > H - 80) {
+      ctx.fillStyle = '#444';
+      ctx.fillRect(W / 2 - 40, H - 45, 80, 8);
+      ctx.fillRect(W / 2 - 5, H - 70, 10, 30);
+    }
+
+    drawRocket(W / 2, Math.min(rocketY, H - 80));
+
+    frame++;
+
+    // Close after rocket exits screen
+    if (rocketY < -100) {
+      cancelAnimationFrame(raf);
+      overlay.style.transition = 'opacity 0.4s';
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.remove(); callback(); }, 400);
+      return;
+    }
+
+    raf = requestAnimationFrame(tick);
+  }
+
+  // 8-bit rocket sound
+  try {
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime;
+    // Rumble
+    const noise = actx.createOscillator();
+    const gain  = actx.createGain();
+    noise.connect(gain); gain.connect(actx.destination);
+    noise.type = 'sawtooth';
+    noise.frequency.setValueAtTime(80, t);
+    noise.frequency.linearRampToValueAtTime(200, t + 2);
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.linearRampToValueAtTime(0, t + 2);
+    noise.start(t); noise.stop(t + 2);
+    // Ascending beeps
+    [440, 550, 660, 880, 1100].forEach((f, i) => {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.connect(g); g.connect(actx.destination);
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.06, t + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.15);
+      o.start(t + i * 0.12); o.stop(t + i * 0.12 + 0.2);
+    });
+  } catch(e) {}
+
+  raf = requestAnimationFrame(tick);
 }
 
 function switchTab(tab) {
@@ -878,131 +1079,237 @@ document.getElementById('apikey-input').addEventListener('keydown', e => { if (e
 
 // ── STATS ────────────────────────────────────────────────────────────────────
 
+let activeSlice = null; // { chartId, sliceIndex, data }
+
 function renderStats() {
   const done    = tasks.filter(t => t.status === 'done').length;
   const open    = tasks.filter(t => t.status !== 'done').length;
   const overdue = tasks.filter(t => t.status !== 'done' && t.due && new Date(t.due) < new Date(today())).length;
   const total   = tasks.length;
 
-  // ── PIE: done vs open ──────────────────────────────────────────────
+  // ── PIE: status breakdown ──────────────────────────────────────────
   const pieCanvas = document.getElementById('pie-chart');
   const pieCtx    = pieCanvas.getContext('2d');
   const pieData   = [
-    { label: 'Done',     value: done, color: '#16A34A' },
-    { label: 'In Progress / Waiting', value: tasks.filter(t => t.status === 'inprogress' || t.status === 'waiting').length, color: '#2563EB' },
-    { label: 'To Do',    value: tasks.filter(t => t.status === 'todo').length, color: '#7C3AED' },
-    { label: 'Special Care', value: tasks.filter(t => t.status === 'specialcare').length, color: '#E11D48' },
+    { label: 'Done',           value: tasks.filter(t => t.status === 'done').length,        color: '#16A34A', filter: t => t.status === 'done' },
+    { label: 'In Progress',    value: tasks.filter(t => t.status === 'inprogress').length,   color: '#2563EB', filter: t => t.status === 'inprogress' },
+    { label: 'Waiting',        value: tasks.filter(t => t.status === 'waiting').length,      color: '#EA580C', filter: t => t.status === 'waiting' },
+    { label: 'To Do',          value: tasks.filter(t => t.status === 'todo').length,         color: '#7C3AED', filter: t => t.status === 'todo' },
+    { label: 'Log to Totango', value: tasks.filter(t => t.status === 'logtotango').length,   color: '#0D9488', filter: t => t.status === 'logtotango' },
+    { label: 'Special Care',   value: tasks.filter(t => t.status === 'specialcare').length,  color: '#E11D48', filter: t => t.status === 'specialcare' },
   ].filter(d => d.value > 0);
 
-  drawPie(pieCtx, pieCanvas.width, pieData);
-  renderLegend('chart-legend', pieData);
+  drawInteractivePie(pieCanvas, pieCtx, pieData, 'pie');
+  renderInteractiveLegend('chart-legend', pieData, 'pie');
 
-  // ── BAR: by category ───────────────────────────────────────────────
+  // ── PIE: by category ───────────────────────────────────────────────
   const cats = ['Support', 'Bug', 'Feature', 'Billing', 'Follow-up'];
   const catColors = { Support: '#2563EB', Bug: '#DC2626', Feature: '#16A34A', Billing: '#D97706', 'Follow-up': '#7C3AED' };
   const barData = cats.map(c => ({
-    label: c,
-    value: tasks.filter(t => t.tag === c).length,
-    color: catColors[c]
+    label: c, value: tasks.filter(t => t.tag === c).length,
+    color: catColors[c], filter: t => t.tag === c
   })).filter(d => d.value > 0);
 
   const barCanvas = document.getElementById('bar-chart');
   const barCtx    = barCanvas.getContext('2d');
   if (barData.length) {
-    drawPie(barCtx, barCanvas.width, barData);
-    renderLegend('bar-legend', barData);
+    drawInteractivePie(barCanvas, barCtx, barData, 'bar');
+    renderInteractiveLegend('bar-legend', barData, 'bar');
   } else {
     barCtx.clearRect(0, 0, barCanvas.width, barCanvas.height);
-    document.getElementById('bar-legend').innerHTML = '<span style="font-size:13px;color:var(--color-text-tertiary)">No tasks yet</span>';
+    document.getElementById('bar-legend').innerHTML = '<span style="font-size:13px;color:var(--text-3)">No tasks yet</span>';
   }
 
   // ── SUMMARY ────────────────────────────────────────────────────────
-  const grid = document.getElementById('summary-grid');
-  const pct  = total ? Math.round((done / total) * 100) : 0;
-  grid.innerHTML = `
-    <div class="summary-item highlight">
-      <div class="summary-num">${done}</div>
-      <div class="summary-lbl">Completed</div>
-    </div>
-    <div class="summary-item">
-      <div class="summary-num">${open}</div>
-      <div class="summary-lbl">Open</div>
-    </div>
-    <div class="summary-item ${overdue > 0 ? 'warn' : ''}">
-      <div class="summary-num">${overdue}</div>
-      <div class="summary-lbl">Overdue</div>
-    </div>
-    <div class="summary-item">
-      <div class="summary-num">${total}</div>
-      <div class="summary-lbl">Total</div>
-    </div>
-    <div class="summary-item ${pct >= 70 ? 'highlight' : pct >= 40 ? '' : 'warn'}">
-      <div class="summary-num">${pct}%</div>
-      <div class="summary-lbl">Completion rate</div>
-    </div>
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-item highlight"><div class="summary-num">${done}</div><div class="summary-lbl">Completed</div></div>
+    <div class="summary-item"><div class="summary-num">${open}</div><div class="summary-lbl">Open</div></div>
+    <div class="summary-item ${overdue > 0 ? 'warn' : ''}"><div class="summary-num">${overdue}</div><div class="summary-lbl">Overdue</div></div>
+    <div class="summary-item"><div class="summary-num">${total}</div><div class="summary-lbl">Total</div></div>
+    <div class="summary-item ${pct >= 70 ? 'highlight' : pct >= 40 ? '' : 'warn'}"><div class="summary-num">${pct}%</div><div class="summary-lbl">Completion rate</div></div>
   `;
 }
 
-function drawPie(ctx, size, data) {
-  const cx = size / 2, cy = size / 2, r = size / 2 - 10;
+function drawInteractivePie(canvas, ctx, data, chartId, selectedIdx = -1) {
+  const size  = canvas.width;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 12;
   const total = data.reduce((s, d) => s + d.value, 0);
   ctx.clearRect(0, 0, size, size);
 
   if (total === 0) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#2a2a28';
-    ctx.fill();
-    return;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#2a2a28'; ctx.fill(); return;
   }
 
   let start = -Math.PI / 2;
-  data.forEach(d => {
+  data.forEach((d, i) => {
     const slice = (d.value / total) * Math.PI * 2;
+    const isSelected = selectedIdx === i;
+    const isFaded = selectedIdx >= 0 && !isSelected;
+
+    // Explode selected slice
+    const explode = isSelected ? 8 : 0;
+    const midAngle = start + slice / 2;
+    const ex = Math.cos(midAngle) * explode;
+    const ey = Math.sin(midAngle) * explode;
+
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.globalAlpha = isFaded ? 0.25 : 1;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, start + slice);
     ctx.closePath();
     ctx.fillStyle = d.color;
     ctx.fill();
-    // white gap between slices
-    ctx.strokeStyle = 'white';
+    ctx.strokeStyle = '#1c1c1a';
     ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.restore();
     start += slice;
   });
 
-  // donut hole
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.52, 0, Math.PI * 2);
-  ctx.fillStyle = '#1c1c1a';
-  ctx.fill();
+  // Donut hole
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.52, 0, Math.PI * 2);
+  ctx.fillStyle = '#1c1c1a'; ctx.fill();
 
-  // center text
-  const done = data.find(d => d.label === 'Done');
-  if (done) {
-    const pct = Math.round((done.value / total) * 100);
-    ctx.fillStyle = '#16A34A';
-    ctx.font = `bold ${size * 0.13}px -apple-system, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+  // Center text
+  ctx.globalAlpha = 1;
+  if (selectedIdx >= 0 && data[selectedIdx]) {
+    const d = data[selectedIdx];
+    const pct = Math.round((d.value / total) * 100);
+    ctx.fillStyle = d.color;
+    ctx.font = `bold ${size * 0.12}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${pct}%`, cx, cy - 8);
     ctx.fillStyle = '#606058';
-    ctx.font = `${size * 0.07}px -apple-system, sans-serif`;
-    ctx.fillText('done', cx, cy + 12);
+    ctx.font = `${size * 0.065}px -apple-system, sans-serif`;
+    const shortLabel = d.label.length > 10 ? d.label.slice(0, 9) + '…' : d.label;
+    ctx.fillText(shortLabel, cx, cy + 10);
+  } else {
+    const done = data.find(d => d.label === 'Done');
+    if (done) {
+      const pct = Math.round((done.value / total) * 100);
+      ctx.fillStyle = '#16A34A';
+      ctx.font = `bold ${size * 0.12}px -apple-system, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`${pct}%`, cx, cy - 8);
+      ctx.fillStyle = '#606058';
+      ctx.font = `${size * 0.065}px -apple-system, sans-serif`;
+      ctx.fillText('done', cx, cy + 10);
+    }
   }
+
+  // Add click handler (replace old one)
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX - cx;
+    const my = (e.clientY - rect.top)  * scaleY - cy;
+    const dist = Math.sqrt(mx * mx + my * my);
+    const innerR = r * 0.52;
+    if (dist < innerR || dist > r + 14) { closeDrilldown(); return; }
+    let angle = Math.atan2(my, mx) - (-Math.PI / 2);
+    if (angle < 0) angle += Math.PI * 2;
+    const tot = data.reduce((s, d) => s + d.value, 0);
+    let s2 = 0, clickedIdx = -1;
+    for (let i = 0; i < data.length; i++) {
+      s2 += (data[i].value / tot) * Math.PI * 2;
+      if (angle <= s2) { clickedIdx = i; break; }
+    }
+    if (clickedIdx < 0) return;
+    if (activeSlice && activeSlice.chartId === chartId && activeSlice.sliceIndex === clickedIdx) {
+      closeDrilldown(); return;
+    }
+    activeSlice = { chartId, sliceIndex: clickedIdx, data };
+    drawInteractivePie(canvas, ctx, data, chartId, clickedIdx);
+    renderInteractiveLegend(chartId === 'pie' ? 'chart-legend' : 'bar-legend', data, chartId, clickedIdx);
+    showDrilldown(data[clickedIdx]);
+    playSoundClick();
+  };
 }
 
-function renderLegend(containerId, data) {
+function renderInteractiveLegend(containerId, data, chartId, selectedIdx = -1) {
   const total = data.reduce((s, d) => s + d.value, 0);
-  document.getElementById(containerId).innerHTML = data.map(d => `
-    <div class="legend-item">
+  document.getElementById(containerId).innerHTML = data.map((d, i) => `
+    <div class="legend-item ${selectedIdx >= 0 && selectedIdx !== i ? 'faded' : ''}"
+         onclick="legendClick('${chartId}', ${i})">
       <div class="legend-dot" style="background:${d.color}"></div>
       <span class="legend-label">${d.label}</span>
       <span class="legend-val">${d.value} <span style="font-weight:400;color:var(--text-3)">(${Math.round(d.value/total*100)}%)</span></span>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
+
+function legendClick(chartId, idx) {
+  const canvasId = chartId === 'pie' ? 'pie-chart' : 'bar-chart';
+  const legendId = chartId === 'pie' ? 'chart-legend' : 'bar-legend';
+  const canvas   = document.getElementById(canvasId);
+  const ctx      = canvas.getContext('2d');
+
+  // Rebuild data
+  const data = chartId === 'pie'
+    ? [
+        { label: 'Done',           value: tasks.filter(t => t.status === 'done').length,        color: '#16A34A', filter: t => t.status === 'done' },
+        { label: 'In Progress',    value: tasks.filter(t => t.status === 'inprogress').length,   color: '#2563EB', filter: t => t.status === 'inprogress' },
+        { label: 'Waiting',        value: tasks.filter(t => t.status === 'waiting').length,      color: '#EA580C', filter: t => t.status === 'waiting' },
+        { label: 'To Do',          value: tasks.filter(t => t.status === 'todo').length,         color: '#7C3AED', filter: t => t.status === 'todo' },
+        { label: 'Log to Totango', value: tasks.filter(t => t.status === 'logtotango').length,   color: '#0D9488', filter: t => t.status === 'logtotango' },
+        { label: 'Special Care',   value: tasks.filter(t => t.status === 'specialcare').length,  color: '#E11D48', filter: t => t.status === 'specialcare' },
+      ].filter(d => d.value > 0)
+    : ['Support','Bug','Feature','Billing','Follow-up'].map(c => ({
+        label: c, value: tasks.filter(t => t.tag === c).length,
+        color: {Support:'#2563EB',Bug:'#DC2626',Feature:'#16A34A',Billing:'#D97706','Follow-up':'#7C3AED'}[c],
+        filter: t => t.tag === c
+      })).filter(d => d.value > 0);
+
+  if (activeSlice && activeSlice.chartId === chartId && activeSlice.sliceIndex === idx) {
+    closeDrilldown(); return;
+  }
+  activeSlice = { chartId, sliceIndex: idx, data };
+  drawInteractivePie(canvas, ctx, data, chartId, idx);
+  renderInteractiveLegend(legendId, data, chartId, idx);
+  showDrilldown(data[idx]);
+  playSoundClick();
+}
+
+function showDrilldown(slice) {
+  const matchingTasks = tasks.filter(slice.filter);
+  document.getElementById('drilldown-title').textContent = slice.label;
+  document.getElementById('drilldown-count').textContent = `${matchingTasks.length} task${matchingTasks.length !== 1 ? 's' : ''}`;
+
+  const container = document.getElementById('drilldown-tasks');
+  if (matchingTasks.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:8px 0">No tasks in this group</div>';
+  } else {
+    container.innerHTML = matchingTasks.map(t => `
+      <div class="drilldown-task" onclick="closeDrilldown();openDetail(${t.id})">
+        <span class="tag ${TAG_CLASSES[t.tag] || 't-support'}">${t.tag}</span>
+        <div class="drilldown-task-info">
+          <div class="drilldown-task-title">${escHtml(t.title)}</div>
+          ${t.client ? `<div class="drilldown-task-client">${escHtml(t.client)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // Show drilldown panel with color accent
+  const panel = document.getElementById('stats-drilldown');
+  panel.style.display = 'block';
+  panel.querySelector('.drilldown-card').style.borderTop = `3px solid ${slice.color}`;
+  document.querySelector('.stats-layout').classList.add('with-drilldown');
+}
+
+function closeDrilldown() {
+  activeSlice = null;
+  document.getElementById('stats-drilldown').style.display = 'none';
+  document.querySelector('.stats-layout').classList.remove('with-drilldown');
+  renderStats();
+}
+
+// Keep old drawPie and renderLegend as no-ops for safety
+function drawPie() {}
+function renderLegend() {}
 
 // ── WEEKLY VIEW ───────────────────────────────────────────────────────────────
 
