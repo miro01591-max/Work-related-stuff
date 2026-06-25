@@ -849,10 +849,9 @@ function renderBoard() {
         t.movedAt = new Date().toISOString();
         saveTasks();
         renderBoard();
-        if (col.id === 'done' && prevStatus !== 'done') {
-          playDoneSound();
-          launchConfetti();
-        }
+        // Find the card element to animate
+        const cardEl = document.querySelector(`[data-task-id="${t.id}"]`);
+        triggerColEffect(col.id, cardEl);
       }
       dragId = null;
     });
@@ -907,14 +906,16 @@ function renderBoard() {
         if (!task) return;
         if (!task.totango) {
           task.totango = true;
-          // Auto-move to Done if coming from Log to Totango
           if (task.status === 'logtotango') {
             task.status = 'done';
+            task.movedAt = new Date().toISOString();
           }
           saveTasks();
           renderBoard();
-          playDoneSound();
-          launchConfetti();
+          setTimeout(() => {
+            const cardEl = document.querySelector(`[data-task-id="${task.id}"]`);
+            triggerColEffect('done', cardEl);
+          }, 50);
         }
       });
 
@@ -1027,10 +1028,11 @@ function saveDetail() {
   if (!t) return;
   const prevStatus = t.status;
   const active = document.querySelector('#det-status-row .sbtn.active');
+  let statusChanged = false;
   if (active) {
     const idx = [...document.querySelectorAll('#det-status-row .sbtn')].indexOf(active);
     const newStatus = COLS[idx].id;
-    if (newStatus !== t.status) t.movedAt = new Date().toISOString();
+    if (newStatus !== t.status) { t.movedAt = new Date().toISOString(); statusChanged = true; }
     t.status = newStatus;
   }
   const newTitle = document.getElementById('det-title').value.trim();
@@ -1041,9 +1043,11 @@ function saveDetail() {
   saveTasks();
   closeDetail();
   renderBoard();
-  if (t.status === 'done' && prevStatus !== 'done') {
-    playDoneSound();
-    launchConfetti();
+  if (statusChanged) {
+    setTimeout(() => {
+      const cardEl = document.querySelector(`[data-task-id="${t.id}"]`);
+      triggerColEffect(t.status, cardEl);
+    }, 50);
   }
 }
 
@@ -2136,7 +2140,124 @@ function launchConfetti() {
   draw();
 }
 
-// ── PAC-MAN LOADING ANIMATION ────────────────────────────────────────────────
+// ── COLUMN MOVE EFFECTS ───────────────────────────────────────────────────────
+
+const COL_EFFECTS = {
+  todo: {
+    sound: () => play8bit([392, 330, 262], [0.07, 0.07, 0.1], 0.1), // descending — "back to start"
+    anim:  (el) => colFlash(el, '#7C3AED', 'stars')
+  },
+  waiting: {
+    sound: () => play8bit([440, 440, 392], [0.06, 0.06, 0.14], 0.08), // two taps — "waiting ping"
+    anim:  (el) => colFlash(el, '#EA580C', 'dots')
+  },
+  inprogress: {
+    sound: () => play8bit([262, 330, 392, 440], [0.06, 0.06, 0.06, 0.1], 0.1), // ascending — "in motion"
+    anim:  (el) => colFlash(el, '#2563EB', 'sparks')
+  },
+  logtotango: {
+    sound: () => play8bit([523, 784, 1047], [0.07, 0.07, 0.12], 0.12), // high rise — "send off"
+    anim:  (el) => colFlash(el, '#0D9488', 'bubbles')
+  },
+  done: {
+    sound: () => playDoneSound(),
+    anim:  (el) => { launchConfetti(); colFlash(el, '#16A34A', 'stars'); }
+  },
+  specialcare: {
+    sound: () => play8bit([880, 660, 440, 330], [0.05, 0.05, 0.05, 0.12], 0.14), // alarm descend
+    anim:  (el) => colFlash(el, '#E11D48', 'flash')
+  }
+};
+
+function triggerColEffect(colId, cardEl) {
+  const fx = COL_EFFECTS[colId];
+  if (!fx) return;
+  fx.sound();
+  if (cardEl) fx.anim(cardEl);
+}
+
+function colFlash(cardEl, color, type) {
+  if (!cardEl) return;
+  const rect = cardEl.getBoundingClientRect();
+  const cx   = rect.left + rect.width  / 2;
+  const cy   = rect.top  + rect.height / 2;
+
+  // Card flash
+  cardEl.style.transition = 'box-shadow 0.15s, transform 0.15s';
+  cardEl.style.boxShadow  = `0 0 0 2px ${color}, 0 4px 20px ${color}66`;
+  cardEl.style.transform  = 'scale(1.04)';
+  setTimeout(() => {
+    cardEl.style.boxShadow = '';
+    cardEl.style.transform = '';
+  }, 350);
+
+  // Particle burst
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998';
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  let particles = [];
+  const count = type === 'flash' ? 12 : type === 'stars' ? 10 : 8;
+
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const speed = 2 + Math.random() * 3;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - (type === 'bubbles' ? 1 : 0),
+      life: 1, r: type === 'dots' ? 4 : 5 + Math.random() * 4,
+      color, type
+    });
+  }
+
+  let frame = 0;
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.vy += type === 'bubbles' ? -0.05 : 0.08;
+      p.life -= 0.04;
+      if (p.life <= 0) return;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle   = p.color;
+      if (type === 'stars') {
+        drawStar(ctx, p.x, p.y, p.r, frame * 0.1);
+      } else if (type === 'sparks') {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx));
+        ctx.fillRect(-p.r, -1.5, p.r * 2, 3);
+        ctx.restore();
+      } else if (type === 'flash') {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (2 - p.life), 0, Math.PI * 2);
+        ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.globalAlpha = p.life * 0.8; ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+    frame++;
+    if (frame < 30) requestAnimationFrame(tick);
+    else canvas.remove();
+  }
+  tick();
+}
+
+function drawStar(ctx, x, y, r, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+    const a2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+    if (i === 0) ctx.moveTo(Math.cos(a1) * r, Math.sin(a1) * r);
+    else ctx.lineTo(Math.cos(a1) * r, Math.sin(a1) * r);
+    ctx.lineTo(Math.cos(a2) * r * 0.4, Math.sin(a2) * r * 0.4);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
 
 let pacRaf = null;
 let pacMsgInterval = null;
