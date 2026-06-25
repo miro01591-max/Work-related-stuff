@@ -1167,9 +1167,49 @@ canvas { flex-shrink: 0; }
 .legend-label { color: var(--text-2); flex: 1; }
 .legend-val { font-weight: 600; padding-left: 8px; }
 
-/* Drilldown */
-.drilldown-card { height: 100%; max-height: calc(100vh - 200px); overflow-y: auto; }
-.drilldown-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+.stats-layout.with-drilldown { grid-template-columns: 1fr 400px; }
+.stats-right {
+  position: sticky;
+  top: 28px;
+  height: calc(100vh - 170px);
+  display: flex;
+  flex-direction: column;
+}
+.drilldown-card {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-top: 3px solid transparent;
+}
+.drilldown-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #e879a0 #1a0a1a;
+}
+.drilldown-scroll::-webkit-scrollbar { width: 8px; }
+.drilldown-scroll::-webkit-scrollbar-track { background: #0f0a14; border-radius: 999px; }
+.drilldown-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #e879a0, #ff4488);
+  border-radius: 999px;
+  border: 2px solid #0f0a14;
+}
+.drilldown-scroll::-webkit-scrollbar-button { display: none; }
+.drilldown-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+  pointer-events: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.drilldown-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 8px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); }
 .drilldown-task {
   display: flex;
   align-items: flex-start;

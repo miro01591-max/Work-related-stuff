@@ -1295,8 +1295,10 @@ function showDrilldown(slice) {
 
   // Show drilldown panel with color accent
   const panel = document.getElementById('stats-drilldown');
-  panel.style.display = 'block';
-  panel.querySelector('.drilldown-card').style.borderTop = `3px solid ${slice.color}`;
+  panel.style.display = 'flex';
+  panel.style.flexDirection = 'column';
+  const card = panel.querySelector('.drilldown-card');
+  card.style.borderTopColor = slice.color;
   document.querySelector('.stats-layout').classList.add('with-drilldown');
 }
 
