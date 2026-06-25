@@ -1382,36 +1382,31 @@ async function searchTotangoAccounts() {
   statusEl.style.color = 'var(--text-3)';
 
   try {
-    // Totango uses form-encoded search query
-    const searchQuery = `?q=(type:("account")) AND (name:("${query}"))&count=10&offset=0&fields=["display_name","arr","health","name","contract_value"]`;
-
-    const res = await fetch(`${workerUrl}/api/v1/search/accounts${encodeURIComponent(searchQuery)}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+    const res = await fetch(`${workerUrl}/api/v1/search/accounts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: {
+          terms: [{
+            type: 'string_attribute',
+            attribute: 'name',
+            in_list: [query]
+          }],
+          count: 10,
+          offset: 0,
+          fields: ['display_name', 'arr', 'health', 'name', 'contract_value']
+        }
+      })
     });
 
     const data = await res.json();
     const accounts = data?.response?.accounts?.hits || [];
-
     statusEl.textContent = '';
     renderTotangoAccounts(accounts, query);
 
   } catch(e) {
-    // Try alternative endpoint format
-    try {
-      const res2 = await fetch(`${workerUrl}/api/v1/search/accounts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `q=(type:("account")) AND (display_name:("${query}"))&count=10&offset=0`
-      });
-      const data2 = await res2.json();
-      const accounts2 = data2?.response?.accounts?.hits || [];
-      statusEl.textContent = '';
-      renderTotangoAccounts(accounts2, query);
-    } catch(e2) {
-      statusEl.textContent = '⚠ Search failed — check Worker URL';
-      statusEl.style.color = '#f87171';
-    }
+    statusEl.textContent = `⚠ Search failed: ${e.message}`;
+    statusEl.style.color = '#f87171';
   }
 }
 
