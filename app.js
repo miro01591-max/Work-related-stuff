@@ -842,21 +842,69 @@ function renderFocusedCol(colId) {
   const board = document.getElementById('board');
 
   board.innerHTML = `
-    <div class="focus-overlay" style="grid-column:1/-1;background:${cc.bg}22;border:1px solid ${cc.border}33;border-radius:var(--radius-lg);padding:20px">
+    <div class="focus-overlay" style="grid-column:1/-1;background:${cc.bg}22;border:1px solid ${cc.border}33;border-radius:var(--radius-lg);padding:20px;position:relative">
       <div class="focus-header" style="border-bottom-color:${cc.border}44">
         <div style="display:flex;align-items:center;gap:12px">
           <div class="col-title" style="font-size:16px;color:${cc.text}">${col.label}</div>
           <span class="col-count" style="background:${cc.border}22;color:${cc.text}">${colTasks.length}</span>
         </div>
-        <button class="icon-btn" onclick="focusedCol=null;renderBoard()" style="color:${cc.text}">
-          <i class="ti ti-arrow-left"></i> Back
-        </button>
       </div>
       <div class="focus-grid" id="focus-grid"></div>
+      <button id="focus-back-btn" onclick="focusedCol=null;renderBoard()" style="
+        position:fixed;
+        right:32px;
+        top:50%;
+        transform:translateY(-50%);
+        background:${cc.bg};
+        border:1px solid ${cc.border};
+        color:${cc.text};
+        border-radius:999px;
+        padding:10px 18px;
+        font-size:12px;
+        font-family:inherit;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        gap:6px;
+        transition:transform 0.2s, box-shadow 0.2s, right 0.2s;
+        z-index:100;
+        box-shadow:0 0 12px ${cc.border}33;
+      ">
+        <i class="ti ti-arrow-left" style="font-size:14px"></i> Back
+      </button>
     </div>
   `;
 
   const grid = document.getElementById('focus-grid');
+
+  // Magnetic back button — attracts toward cursor when nearby
+  const backBtn = document.getElementById('focus-back-btn');
+  const ATTRACT_ZONE = 180; // px radius to start attracting
+
+  document.addEventListener('mousemove', function onMouseMove(e) {
+    if (!document.getElementById('focus-back-btn')) {
+      document.removeEventListener('mousemove', onMouseMove);
+      return;
+    }
+    const btnRect = backBtn.getBoundingClientRect();
+    const btnCX = btnRect.left + btnRect.width / 2;
+    const btnCY = btnRect.top + btnRect.height / 2;
+    const dx = e.clientX - btnCX;
+    const dy = e.clientY - btnCY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < ATTRACT_ZONE) {
+      const pull = (1 - dist / ATTRACT_ZONE) * 0.35;
+      const moveX = dx * pull;
+      const moveY = dy * pull;
+      backBtn.style.transform = `translateY(calc(-50% + ${moveY}px)) translateX(${moveX}px)`;
+      backBtn.style.boxShadow = `0 0 ${20 + pull * 40}px ${cc.border}${Math.floor(pull * 99).toString(16).padStart(2,'0')}`;
+    } else {
+      backBtn.style.transform = 'translateY(-50%) translateX(0px)';
+      backBtn.style.boxShadow = `0 0 12px ${cc.border}33`;
+    }
+  });
+
   if (colTasks.length === 0) {
     grid.innerHTML = `<div style="color:${cc.text};opacity:0.4;font-size:13px;padding:20px 0">No tasks in this column</div>`;
     return;
