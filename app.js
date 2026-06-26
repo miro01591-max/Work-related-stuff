@@ -2532,7 +2532,59 @@ function playSoundCopy()   { play8bit([880, 440], [0.04, 0.06], 0.08); }
 // Generate — loading beeps
 function playSoundGenerate(){ play8bit([262, 294, 330, 349], [0.07, 0.07, 0.07, 0.07], 0.08); }
 // Done/celebrate — fanfare
-function playDoneSound()   { play8bit([523, 659, 784, 1047], [0.08, 0.08, 0.08, 0.18], 0.15); }
+function playDoneSound() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime;
+
+    // 8-bit approximation of the iconic "You're The Best" opening riff
+    const notes = [
+      // Main hook — iconic ascending phrase
+      { f: 392, s: 0.00, d: 0.12 },
+      { f: 440, s: 0.12, d: 0.12 },
+      { f: 494, s: 0.24, d: 0.12 },
+      { f: 523, s: 0.36, d: 0.18 },
+      { f: 494, s: 0.54, d: 0.10 },
+      { f: 523, s: 0.64, d: 0.10 },
+      { f: 587, s: 0.74, d: 0.20 },
+      // Second phrase
+      { f: 659, s: 0.96, d: 0.14 },
+      { f: 587, s: 1.10, d: 0.10 },
+      { f: 523, s: 1.20, d: 0.10 },
+      { f: 587, s: 1.30, d: 0.14 },
+      { f: 659, s: 1.44, d: 0.30 },
+      // Punch finish
+      { f: 784, s: 1.76, d: 0.12 },
+      { f: 880, s: 1.88, d: 0.25 },
+    ];
+
+    notes.forEach(n => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'square';
+      o.frequency.value = n.f;
+      g.gain.setValueAtTime(0.10, t + n.s);
+      g.gain.exponentialRampToValueAtTime(0.001, t + n.s + n.d);
+      o.start(t + n.s);
+      o.stop(t + n.s + n.d + 0.02);
+    });
+
+    // Bass drum pulse
+    [0, 0.36, 0.74, 1.10, 1.44].forEach(s => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(120, t + s);
+      o.frequency.exponentialRampToValueAtTime(40, t + s + 0.1);
+      g.gain.setValueAtTime(0.18, t + s);
+      g.gain.exponentialRampToValueAtTime(0.001, t + s + 0.15);
+      o.start(t + s); o.stop(t + s + 0.2);
+    });
+
+  } catch(e) {}
+}
 // Error — descending sad
 function playSoundError()  { play8bit([330, 262, 196], [0.1, 0.1, 0.15], 0.12); }
 // Mic on — blip up

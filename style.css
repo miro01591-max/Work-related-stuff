@@ -26,7 +26,6 @@
 
 @property --card-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 @keyframes card-spin { to { --card-angle: 360deg; } }
-@keyframes card-shimmer { 0% { transform: translateX(-150%) skewX(-10deg); } 100% { transform: translateX(400%) skewX(-10deg); } }
 
 .card {
   position: relative;
@@ -57,16 +56,9 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  overflow: hidden;
   pointer-events: none;
   z-index: 0;
-}
-.card .shimmer-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 55%, transparent 70%);
-  animation: card-shimmer 3.5s ease-in-out infinite;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.04) 0%, transparent 65%);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -639,16 +631,9 @@ body {
   position: absolute;
   inset: 0;
   border-radius: var(--radius);
-  overflow: hidden;
   pointer-events: none;
   z-index: 0;
-}
-.kanban-card .shimmer-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.01) 55%, transparent 70%);
-  animation: card-shimmer 3.5s ease-in-out infinite;
+  background: radial-gradient(ellipse at 50% 20%, rgba(255,255,255,0.03) 0%, transparent 70%);
 }
 
 /* Minimized state — hide client, meta, totango */
