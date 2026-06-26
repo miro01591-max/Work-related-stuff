@@ -878,29 +878,31 @@ function renderFocusedCol(colId) {
 
   const grid = document.getElementById('focus-grid');
 
-  // Magnetic back button — horizontal attraction only
+  // Magnetic back button — follows mouse X position directly on header line
   const backBtn = document.getElementById('focus-back-btn');
-  const ATTRACT_ZONE = 200;
+  const headerEl = backBtn.parentElement;
 
   document.addEventListener('mousemove', function onMouseMove(e) {
     if (!document.getElementById('focus-back-btn')) {
       document.removeEventListener('mousemove', onMouseMove);
       return;
     }
-    const btnRect = backBtn.getBoundingClientRect();
-    const btnCX = btnRect.left + btnRect.width / 2;
-    const btnCY = btnRect.top + btnRect.height / 2;
-    const dx = e.clientX - btnCX;
-    const dy = e.clientY - btnCY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < ATTRACT_ZONE) {
-      const pull = (1 - dist / ATTRACT_ZONE) * 0.45;
-      const moveX = dx * pull; // horizontal only
-      backBtn.style.transform = `translate(calc(-50% + ${moveX}px), -50%)`;
-      backBtn.style.boxShadow = `0 0 ${16 + pull * 30}px ${cc.border}${Math.floor(0.2 + pull * 0.6 * 255).toString(16).padStart(2,'0')}`;
+    const headerRect = headerEl.getBoundingClientRect();
+    
+    // Only react when mouse is near the header line (within 80px vertically)
+    const dy = Math.abs(e.clientY - (headerRect.top + headerRect.height / 2));
+    
+    if (dy < 80) {
+      // Map mouse X to position within header
+      const relX = e.clientX - headerRect.left;
+      const pct = Math.max(0.1, Math.min(0.9, relX / headerRect.width));
+      const strength = 1 - (dy / 80); // stronger when closer to line
+      const targetPct = 50 + (pct - 0.5) * 100 * strength;
+      backBtn.style.left = `${targetPct}%`;
+      backBtn.style.boxShadow = `0 0 ${16 + strength * 20}px ${cc.border}99`;
+      backBtn.style.transition = 'left 0.25s ease, box-shadow 0.15s ease, transform 0.15s ease';
     } else {
-      backBtn.style.transform = 'translate(-50%, -50%)';
+      backBtn.style.left = '50%';
       backBtn.style.boxShadow = `0 0 12px ${cc.border}33`;
     }
   });
