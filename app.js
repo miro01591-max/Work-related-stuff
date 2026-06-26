@@ -1327,6 +1327,17 @@ function closeDrilldown() {
 function drawPie() {}
 function renderLegend() {}
 
+function showToast(msg, duration = 3000) {
+  const existing = document.getElementById('toast-msg');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'toast-msg';
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1c1c1a;border:0.5px solid rgba(255,255,255,0.15);color:#f0f0ec;padding:10px 20px;border-radius:999px;font-size:13px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:opacity 0.3s';
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, duration);
+}
+
 // ── SEND TO TOTANGO ──────────────────────────────────────────────────────────
 
 // Set this after deploying your Cloudflare Worker
@@ -1342,19 +1353,18 @@ let totangoSearchTimeout   = null;
 function openSendToTotango() {
   if (!generatedText) return;
 
-  // Pre-fill subject from companyName + type
   const company = lastParsed?.companyName || pendingClient || '';
-  const type    = document.getElementById('tp-type')?.value || 'MS Teams meeting';
-  document.getElementById('tango-subject').value = company ? `${company} — ${type}` : type;
 
-  // Pre-fill search with company name
-  if (company) {
-    document.getElementById('tango-search').value = company;
-    searchTotangoAccounts();
-  }
+  // Copy touchpoint to clipboard
+  copyTP();
 
-  document.getElementById('totango-modal').classList.add('open');
-  playSoundOpen();
+  // Open Totango with company name pre-filled in search
+  const searchQuery = encodeURIComponent(company);
+  const totangoUrl = `https://app.totango.com/t11/planradar-prod/#/search?q=${searchQuery}`;
+  window.open(totangoUrl, '_blank');
+
+  playSoundClick();
+  showToast(`Touchpoint kopiran! Totango otvoren s "${company}" u searchu.`);
 }
 
 function closeTotangoModal() {
