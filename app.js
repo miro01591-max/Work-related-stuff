@@ -1358,9 +1358,8 @@ function openSendToTotango() {
   // Copy touchpoint to clipboard
   copyTP();
 
-  // Open Totango with company name pre-filled in search
-  const searchQuery = encodeURIComponent(company);
-  const totangoUrl = `https://app.totango.com/t11/planradar-prod/#/search?q=${searchQuery}`;
+  // Open Totango - touchpoint already copied, user just needs to find account
+  const totangoUrl = `https://app.totango.com/t11/planradar-prod/#/my-business/overview`;
   window.open(totangoUrl, '_blank');
 
   playSoundClick();
