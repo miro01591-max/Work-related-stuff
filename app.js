@@ -1355,15 +1355,138 @@ function openSendToTotango() {
 
   const company = lastParsed?.companyName || pendingClient || '';
 
-  // Copy touchpoint to clipboard
+  // Copy touchpoint to clipboard first
   copyTP();
 
-  // Open Totango - touchpoint already copied, user just needs to find account
-  const totangoUrl = `https://app.totango.com/t11/planradar-prod/#/my-business/overview`;
-  window.open(totangoUrl, '_blank');
+  // 8-bit overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000011;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;image-rendering:pixelated;font-family:"Press Start 2P",monospace';
 
-  playSoundClick();
-  showToast(`Touchpoint kopiran! Totango otvoren s "${company}" u searchu.`);
+  const canvas = document.createElement('canvas');
+  canvas.width = 400; canvas.height = 300;
+  canvas.style.cssText = 'width:400px;height:300px;image-rendering:pixelated';
+  overlay.appendChild(canvas);
+
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-family:"Press Start 2P",monospace;font-size:8px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center';
+  hint.textContent = '[ PRESS ANY KEY ]';
+  overlay.appendChild(hint);
+
+  document.body.appendChild(overlay);
+
+  // Load pixel font
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
+  document.head.appendChild(link);
+
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const W = 400, H = 300;
+  let frame = 0;
+
+  const stars = Array.from({length: 40}, () => ({
+    x: Math.random()*W|0, y: Math.random()*H|0,
+    c: ['#00ffff','#ffff00','#ff00ff','#ffffff','#88ff88'][Math.random()*5|0],
+    t: Math.random()*8|0
+  }));
+
+  function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+
+  function drawFloppy(x, y) {
+    // floppy disk icon
+    px(x,y,32,32,'#dddddd');
+    px(x+2,y+2,28,10,'#333333');
+    px(x+6,y+4,8,6,'#888888');
+    px(x+8,y+20,16,10,'#888888');
+    px(x+10,y+22,12,6,'#cccccc');
+  }
+
+  function tick() {
+    ctx.clearRect(0,0,W,H);
+    px(0,0,W,H,'#000011');
+
+    // Stars
+    stars.forEach(s => {
+      const tw = (frame+s.t)%8 < 4;
+      px(s.x,s.y,1,1,tw?s.c:'#111133');
+    });
+
+    // Border blink
+    const bc = frame%8<4?'#00ffff':'#ff00ff';
+    ctx.strokeStyle=bc; ctx.lineWidth=3;
+    ctx.strokeRect(4,4,W-8,H-8);
+    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
+    ctx.strokeRect(8,8,W-16,H-16);
+
+    // Floppy icon
+    drawFloppy(W/2-16, 30);
+
+    // COPIED! text
+    ctx.fillStyle = frame%6<3 ? '#ffff00' : '#ff8800';
+    ctx.font = '16px "Press Start 2P",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('COPIED!', W/2, 100);
+
+    // Client name — smaller, white
+    ctx.fillStyle = '#00ffff';
+    ctx.font = '10px "Press Start 2P",monospace';
+    const maxW = W - 40;
+    const words = company.split(' ');
+    let line = '', lines = [];
+    words.forEach(word => {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line); line = word;
+      } else line = test;
+    });
+    if (line) lines.push(line);
+    lines.slice(0,3).forEach((l,i) => ctx.fillText(l, W/2, 140 + i*20));
+
+    // OPENING TOTANGO...
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '7px "Press Start 2P",monospace';
+    const dots = '.'.repeat(frame%6);
+    ctx.fillText('OPENING TOTANGO' + dots, W/2, 240);
+
+    // Progress bar
+    const progress = Math.min(frame / 60, 1);
+    px(40, 255, 320, 8, '#333333');
+    px(40, 255, Math.floor(320*progress), 8, '#00ffff');
+    for(let i=0;i<=320;i+=20) px(40+i, 255, 1, 8, '#000011');
+
+    frame++;
+
+    // Hint blink
+    hint.style.color = frame%10<5 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)';
+
+    if (frame < 65) requestAnimationFrame(tick);
+    else {
+      overlay.remove();
+      window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
+    }
+  }
+
+  // 8-bit sound
+  try {
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const t = ac.currentTime;
+    [523,659,784,1047].forEach((f,i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='square'; o.frequency.value=f;
+      g.gain.setValueAtTime(0.08, t+i*0.08);
+      g.gain.exponentialRampToValueAtTime(0.001, t+i*0.08+0.1);
+      o.start(t+i*0.08); o.stop(t+i*0.08+0.12);
+    });
+  } catch(e){}
+
+  overlay.onclick = () => {
+    overlay.remove();
+    window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
+  };
+
+  requestAnimationFrame(tick);
 }
 
 function closeTotangoModal() {

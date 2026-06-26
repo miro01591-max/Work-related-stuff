@@ -49,13 +49,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 10px 24px;
+  padding: 16px 10px 16px;
   gap: 0;
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   z-index: 20;
+  overflow: hidden;
 }
 
 .sidebar-logo {
@@ -63,7 +64,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
   color: white;
 }
 .sidebar-logo .ti { font-size: 22px; opacity: 0.9; }
@@ -72,7 +73,7 @@ body {
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -149,7 +150,7 @@ body {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   width: 100%;
 }
 .sidebar-stat {
