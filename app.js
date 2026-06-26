@@ -812,6 +812,68 @@ const TAG_CLASSES = {
 
 let dragId = null;
 
+let focusedCol = null;
+
+function toggleColFocus(colId) {
+  if (focusedCol === colId) {
+    focusedCol = null;
+    renderBoard();
+    return;
+  }
+  focusedCol = colId;
+  renderFocusedCol(colId);
+  playSoundClick();
+}
+
+function renderFocusedCol(colId) {
+  const col = COLS.find(c => c.id === colId);
+  const filter = document.getElementById('kb-filter').value;
+  const colTasks = tasks.filter(t => t.status === colId && (!filter || t.tag === filter));
+  const board = document.getElementById('board');
+
+  board.innerHTML = `
+    <div class="focus-overlay" style="grid-column:1/-1">
+      <div class="focus-header">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="col-title" style="font-size:16px">${col.label}</div>
+          <span class="col-count">${colTasks.length}</span>
+        </div>
+        <button class="icon-btn" onclick="focusedCol=null;renderBoard()" title="Back to board">
+          <i class="ti ti-arrow-left"></i> Back
+        </button>
+      </div>
+      <div class="focus-grid" id="focus-grid"></div>
+    </div>
+  `;
+
+  const grid = document.getElementById('focus-grid');
+  if (colTasks.length === 0) {
+    grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px 0">No tasks in this column</div>';
+    return;
+  }
+
+  colTasks.forEach(t => {
+    const dl = dueLabel(t.due);
+    const tagCls = TAG_CLASSES[t.tag] || 't-support';
+    const movedAt = t.movedAt ? new Date(t.movedAt) : new Date(t.createdAt || Date.now());
+    const daysInCol = Math.floor((Date.now() - movedAt) / 864e5);
+
+    const card = document.createElement('div');
+    card.className = 'focus-card';
+    card.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <span class="tag ${tagCls}">${t.tag}</span>
+        ${dl ? `<span class="weekly-due${dl.over?' over':''}" style="font-size:11px;white-space:nowrap">${dl.text}</span>` : ''}
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:6px">${escHtml(t.title)}</div>
+      ${t.client ? `<div style="font-size:11px;color:var(--text-3)">${escHtml(t.client)}</div>` : ''}
+      ${daysInCol > 0 && t.status !== 'done' ? `<div style="margin-top:8px"><span class="weekly-stuck-days">${daysInCol}d</span></div>` : ''}
+    `;
+    card.onclick = () => { openDetail(t.id); playSoundClick(); };
+    grid.appendChild(card);
+  });
+}
+
 function renderBoard() {
   const filter = document.getElementById('kb-filter').value;
   const board  = document.getElementById('board');
@@ -824,7 +886,7 @@ function renderBoard() {
     colEl.className = `col ${COL_CLASSES[col.id] || ''}`;
     colEl.dataset.colId = col.id;
     colEl.innerHTML = `
-      <div class="col-header">
+      <div class="col-header" onclick="toggleColFocus('${col.id}')" style="cursor:pointer" title="Click to focus">
         <span class="col-title">${col.label}</span>
         <span class="col-count">${colTasks.length}</span>
       </div>`;

@@ -547,7 +547,27 @@ body {
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
+  transition: opacity 0.3s ease, transform 0.3s ease, flex 0.4s ease;
 }
+
+/* COLUMN FOCUS MODE */
+.focus-overlay { animation: focusFadeIn 0.2s ease; }
+@keyframes focusFadeIn { from { opacity:0;transform:translateY(8px); } to { opacity:1;transform:translateY(0); } }
+.focus-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:0.5px solid var(--border); }
+.focus-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px; }
+.focus-card {
+  background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;cursor:pointer;transition:border-color 0.15s,transform 0.15s;
+  position:relative;isolation:isolate;
+}
+.focus-card::before {
+  content:'';position:absolute;inset:-1px;border-radius:calc(var(--radius) + 1px);
+  background:linear-gradient(var(--card-angle),#e879a0,#7c3aed,#2563eb,#0d9488,#e879a0);
+  z-index:-1;animation:card-spin 4s linear infinite;opacity:0;transition:opacity 0.2s;
+}
+.focus-card::after { content:'';position:absolute;inset:0;border-radius:var(--radius);background:var(--surface);z-index:-1; }
+.focus-card:hover { transform:translateY(-2px); }
+.focus-card:hover::before { opacity:1; }
 .col::-webkit-scrollbar { width: 4px; }
 .col::-webkit-scrollbar-track { background: transparent; }
 .col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
