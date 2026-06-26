@@ -75,14 +75,14 @@
       <div class="view active" id="view-tp">
         <div class="tp-wrap">
           <div class="tp-form card"><div class="shimmer-layer"></div>
-            <h2 class="section-title">Novi touchpoint</h2>
+            <h2 class="section-title">New touchpoint</h2>
             <div class="row2">
               <div class="field">
-                <label for="tp-client">Klijent</label>
-                <input id="tp-client" type="text" placeholder="Ime klijenta ili kompanije" />
+                <label for="tp-client">Client</label>
+                <input id="tp-client" type="text" placeholder="Client or company name" />
               </div>
               <div class="field">
-                <label for="tp-type">Vrsta interakcije</label>
+                <label for="tp-type">Interaction type</label>
                 <select id="tp-type">
                   <option value="Support">Support problem</option>
                   <option value="Follow-up">Follow-up</option>
@@ -98,14 +98,14 @@
               <label>Transcript</label>
               <div class="transcript-tabs">
                 <button class="tt-tab active" onclick="switchTranscriptTab('paste')" id="ttab-paste">
-                  <i class="ti ti-clipboard"></i> Zalijepi tekst
+                  <i class="ti ti-clipboard"></i> Paste text
                 </button>
                 <button class="tt-tab" onclick="switchTranscriptTab('file')" id="ttab-file">
-                  <i class="ti ti-file-upload"></i> Učitaj datoteku
+                  <i class="ti ti-file-upload"></i> Upload file
                 </button>
               </div>
               <div id="tt-paste">
-                <textarea id="tp-raw" placeholder="Zalijepi transcript ovdje — Teams/Zoom summary, key points, ili slobodni opis situacije..." rows="6"></textarea>
+                <textarea id="tp-raw" placeholder="Paste transcript here — Teams/Zoom summary, key points, or free description of the situation..." rows="6"></textarea>
               </div>
               <div id="tt-file" style="display:none">
                 <div class="file-drop" id="file-drop"
@@ -115,7 +115,7 @@
                   ondrop="fileDrop(event)">
                   <i class="ti ti-file-text" style="font-size:24px;color:var(--text-3)"></i>
                   <span>Klikni ili prevuci datoteku</span>
-                  <span class="file-hint">Podržava .txt, .md, .docx</span>
+                  <span class="file-hint">Supports .txt, .md, .docx</span>
                 </div>
                 <input type="file" id="tp-file" accept=".txt,.md,.docx" style="display:none" onchange="handleFileUpload(event)" />
                 <div id="file-loaded" class="file-loaded" style="display:none">
@@ -128,12 +128,12 @@
 
             <div class="row2">
               <div class="field">
-                <label for="tp-due">Rok follow-upa</label>
+                <label for="tp-due">Follow-up date</label>
                 <input id="tp-due" type="date" />
               </div>
               <div class="field field-action">
                 <button class="btn btn-primary btn-full" id="btn-generate" onclick="generateTP()">
-                  <i class="ti ti-sparkles"></i> Generiraj touchpoint
+                  <i class="ti ti-sparkles"></i> Generate touchpoint
                 </button>
               </div>
             </div>
@@ -370,16 +370,16 @@
   <div class="modal-bg" id="apikey-modal">
     <div class="modal">
       <div class="modal-header">
-        <h3>Anthropic API ključ</h3>
+        <h3>Anthropic API key</h3>
       </div>
-      <p class="modal-desc">Za generiranje touchpointova potreban je Anthropic API ključ. Sprema se samo lokalno u tvom browseru.</p>
+      <p class="modal-desc">An Anthropic API key is required to generate touchpoints. It is saved locally in your browser only.</p>
       <div class="field">
-        <label for="apikey-input">API ključ</label>
+        <label for="apikey-input">API key</label>
         <input id="apikey-input" type="password" placeholder="sk-ant-..." />
       </div>
       <div class="modal-footer">
         <a class="link-sm" href="https://console.anthropic.com/settings/keys" target="_blank">
-          <i class="ti ti-external-link"></i> Dohvati ključ
+          <i class="ti ti-external-link"></i> Get key
         </a>
         <div class="modal-footer-right">
           <button class="btn btn-primary" onclick="saveApiKey()">Spremi i nastavi</button>

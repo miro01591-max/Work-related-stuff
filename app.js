@@ -66,9 +66,9 @@ function getSampleTasks() {
   const addDays = n => { const d = new Date(todayDate); d.setDate(d.getDate() + n); return fmt(d); };
   const ts = (daysAgo) => { const d = new Date(todayDate); d.setDate(d.getDate() - daysAgo); return d.toISOString(); };
   return [
-    { id: 1, title: 'Login problem — korisnik ne može pristupiti', client: 'Acme d.o.o.', tag: 'Support', status: 'waiting', due: addDays(3), note: '', createdAt: ts(5), movedAt: ts(3) },
+    { id: 1, title: 'Login problem — user cannot log in', client: 'Acme d.o.o.', tag: 'Support', status: 'waiting', due: addDays(3), note: '', createdAt: ts(5), movedAt: ts(3) },
     { id: 2, title: 'Faktura nije stigla na mail', client: 'Beta Systems', tag: 'Billing', status: 'todo', due: addDays(1), note: '', createdAt: ts(2), movedAt: ts(2) },
-    { id: 3, title: 'Export PDF greška na Firefox', client: 'Gamma Tech', tag: 'Bug', status: 'inprogress', due: addDays(7), note: '', createdAt: ts(8), movedAt: ts(6) }
+    { id: 3, title: 'PDF export error on Firefox', client: 'Gamma Tech', tag: 'Bug', status: 'inprogress', due: addDays(7), note: '', createdAt: ts(8), movedAt: ts(6) }
   ];
 }
 
@@ -78,7 +78,7 @@ function dueLabel(due) {
   if (!due) return null;
   const d = new Date(due), t = new Date(today());
   const diff = Math.round((d - t) / 864e5);
-  if (diff < 0)  return { text: `${-diff}d zakašnjelo`, over: true };
+  if (diff < 0)  return { text: `${-diff}d overdue`, over: true };
   if (diff === 0) return { text: 'Danas', over: false };
   if (diff <= 3)  return { text: `Za ${diff}d`, over: false };
   return { text: due.split('-').reverse().join('.'), over: false };
@@ -343,7 +343,7 @@ function fileDrop(e) {
   const file = e.dataTransfer.files[0];
   if (!file) return;
   if (!file.name.match(/\.(txt|md|docx)$/i)) {
-    alert('Podržava samo .txt, .md i .docx datoteke.');
+    alert('Only .txt, .md and .docx files are supported.');
     return;
   }
   processFile(file);
@@ -583,7 +583,7 @@ Wichtig:
 
     if (res.status === 401) {
       localStorage.removeItem(API_KEY_STORAGE);
-      container.innerHTML = '<div class="tp-section-content loading">Neispravan API ključ. Pokušaj ponovo.</div>';
+      container.innerHTML = '<div class="tp-section-content loading">Invalid API key. Please try again.</div>';
       setTimeout(() => {
         document.getElementById('apikey-modal').classList.add('open');
         document.getElementById('apikey-input').value = '';
@@ -617,7 +617,7 @@ Wichtig:
     }
 
   } catch (e) {
-    container.innerHTML = '<div class="tp-section-content loading">Greška pri pozivu API-ja. Provjeri internet vezu.</div>';
+    container.innerHTML = '<div class="tp-section-content loading">API call failed. Check your internet connection.</div>';
     generatedText = '';
   } finally {
     btn.disabled = false;
