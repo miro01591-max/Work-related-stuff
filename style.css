@@ -1,12 +1,12 @@
 :root {
-  --bg: #08080f;
-  --surface: #0e0e1f;
-  --surface2: #12122a;
-  --border: rgba(232,121,160,0.15);
-  --border-strong: rgba(232,121,160,0.25);
-  --text: #e0e0ff;
-  --text-2: #a0a0cc;
-  --text-3: #505070;
+  --bg: #000000;
+  --surface: rgba(0,0,0,0.7);
+  --surface2: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text-2: #888888;
+  --text-3: #444444;
   --blue-bg: #042C53;
   --blue-text: #85B7EB;
   --red-bg: #501313;
@@ -48,7 +48,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: rgba(0,0,0,0.85);
   z-index: -1;
 }
 
@@ -56,7 +56,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #08080f;
+  background: #000000;
   color: var(--text);
   font-size: 15px;
   line-height: 1.5;
@@ -75,7 +75,7 @@ body {
 .sidebar {
   width: 110px;
   flex-shrink: 0;
-  background: #08080f;
+  background: rgba(0,0,0,0.8);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -303,8 +303,8 @@ body {
   font-size: 13px;
   padding: 8px 10px;
   border-radius: var(--radius);
-  border: 0.5px solid rgba(232,121,160,0.2);
-  background: #0a0a1a;
+  border: 0.5px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.6);
   color: var(--text);
   font-family: inherit;
   width: 100%;
@@ -312,7 +312,7 @@ body {
 }
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: none;
-  border-color: rgba(232,121,160,0.5);
+  border-color: rgba(232,121,160,0.4);
 }
 .field input::placeholder, .field textarea::placeholder { color: var(--text-3); }
 .field textarea { resize: vertical; }
@@ -866,7 +866,7 @@ body {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: rgba(0,0,0,0.92);
   z-index: -1;
 }
 .modal-header {

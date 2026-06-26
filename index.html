@@ -493,6 +493,8 @@
     function init(){
       cv.width=window.innerWidth;
       cv.height=window.innerHeight;
+      ctx.fillStyle='#000000';
+      ctx.fillRect(0,0,cv.width,cv.height);
       layers.forEach(l=>{
         l.stars=Array.from({length:l.count},()=>({
           x:Math.random()*cv.width,
