@@ -1003,6 +1003,7 @@ function renderBoard() {
       card.draggable = true;
       card.dataset.taskId = t.id;
       card.innerHTML = `
+        <div class="shimmer-layer"></div>
         <div class="card-drag-handle" aria-hidden="true"><i class="ti ti-grip-horizontal"></i></div>
         <div class="card-title">${escHtml(t.title)}</div>
         <div class="card-client card-client-link" data-client="${escHtml(t.client || '')}">${escHtml(t.client || '')}</div>

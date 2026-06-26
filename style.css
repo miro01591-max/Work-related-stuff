@@ -26,20 +26,22 @@
 
 @property --card-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 @keyframes card-spin { to { --card-angle: 360deg; } }
+@keyframes card-shimmer { 0% { transform: translateX(-150%) skewX(-10deg); } 100% { transform: translateX(400%) skewX(-10deg); } }
 
 .card {
   position: relative;
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: rgba(0,0,0,0.88);
   border: none !important;
   isolation: isolate;
+  overflow: hidden;
 }
 .card::before {
   content: '';
   position: absolute;
   inset: -1px;
   border-radius: calc(var(--radius-lg) + 1px);
-  background: linear-gradient(var(--card-angle), #e879a0, #7c3aed, #2563eb, #0d9488, #e879a0);
+  background: linear-gradient(var(--card-angle), #444, #ccc, #888, #333, #eee, #666);
   z-index: -1;
   animation: card-spin 4s linear infinite;
 }
@@ -48,8 +50,23 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.88);
   z-index: -1;
+}
+.card .shimmer-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.card .shimmer-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 55%, transparent 70%);
+  animation: card-shimmer 3.5s ease-in-out infinite;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -607,8 +624,8 @@ body {
 
 /* Card base — minimized by default */
 .kanban-card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
+  background: rgba(0,0,0,0.7);
+  border: 0.5px solid rgba(255,255,255,0.08);
   border-left: 3px solid transparent;
   border-radius: var(--radius);
   padding: 7px 12px;
@@ -616,6 +633,22 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
+  position: relative;
+}
+.kanban-card .shimmer-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.kanban-card .shimmer-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.01) 55%, transparent 70%);
+  animation: card-shimmer 3.5s ease-in-out infinite;
 }
 
 /* Minimized state — hide client, meta, totango */
@@ -863,21 +896,22 @@ body {
 }
 .modal-bg.open { display: flex; }
 .modal {
-  background: var(--surface);
-  border: 1px solid rgba(232,121,160,0.3);
+  background: rgba(0,0,0,0.92);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   width: 100%;
   max-width: 420px;
   position: relative;
   isolation: isolate;
+  overflow: hidden;
 }
 .modal::before {
   content: '';
   position: absolute;
   inset: -1px;
   border-radius: calc(var(--radius-lg) + 1px);
-  background: linear-gradient(var(--card-angle), #e879a0, #7c3aed, #2563eb, #0d9488, #e879a0);
+  background: linear-gradient(var(--card-angle), #444, #ccc, #888, #333, #eee, #666);
   z-index: -1;
   animation: card-spin 4s linear infinite;
 }
