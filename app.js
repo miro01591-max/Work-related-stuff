@@ -888,19 +888,23 @@ function renderFocusedCol(colId) {
       return;
     }
     const headerRect = headerEl.getBoundingClientRect();
+    const btnHalfW = backBtn.offsetWidth / 2;
     
-    // Only react when mouse is near the header line (within 80px vertically)
+    // React when mouse is near the header line (within 80px vertically)
     const dy = Math.abs(e.clientY - (headerRect.top + headerRect.height / 2));
     
     if (dy < 80) {
-      // Map mouse X to position within header
+      const strength = 1 - (dy / 80);
+      // Map mouse X to % within header, clamped so button stays within bounds
       const relX = e.clientX - headerRect.left;
-      const pct = Math.max(0.1, Math.min(0.9, relX / headerRect.width));
-      const strength = 1 - (dy / 80); // stronger when closer to line
-      const targetPct = 50 + (pct - 0.5) * 100 * strength;
-      backBtn.style.left = `${targetPct}%`;
+      const minPx = btnHalfW;
+      const maxPx = headerRect.width - btnHalfW;
+      const clampedX = Math.max(minPx, Math.min(maxPx, relX));
+      const targetPct = (clampedX / headerRect.width) * 100;
+      const finalPct = 50 + (targetPct - 50) * strength;
+      backBtn.style.left = `${finalPct}%`;
       backBtn.style.boxShadow = `0 0 ${16 + strength * 20}px ${cc.border}99`;
-      backBtn.style.transition = 'left 0.25s ease, box-shadow 0.15s ease, transform 0.15s ease';
+      backBtn.style.transition = 'left 0.2s ease, box-shadow 0.15s ease';
     } else {
       backBtn.style.left = '50%';
       backBtn.style.boxShadow = `0 0 12px ${cc.border}33`;
