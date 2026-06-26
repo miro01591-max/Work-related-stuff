@@ -825,20 +825,30 @@ function toggleColFocus(colId) {
   playSoundClick();
 }
 
+const COL_COLORS = {
+  todo:        { bg: '#1a1630', border: '#7C3AED', text: '#7C3AED',  card: '#1a1035' },
+  waiting:     { bg: '#1f1a12', border: '#EA580C', text: '#EA580C',  card: '#1f1508' },
+  inprogress:  { bg: '#0f1828', border: '#2563EB', text: '#2563EB',  card: '#0d1525' },
+  logtotango:  { bg: '#0d1f1a', border: '#0D9488', text: '#0D9488',  card: '#0a1a18' },
+  done:        { bg: '#0d1f14', border: '#16A34A', text: '#16A34A',  card: '#0a1a0e' },
+  specialcare: { bg: '#220f14', border: '#E11D48', text: '#E11D48',  card: '#1f0a10' },
+};
+
 function renderFocusedCol(colId) {
   const col = COLS.find(c => c.id === colId);
+  const cc = COL_COLORS[colId] || { bg:'#1a1a2e', border:'#7C3AED', text:'#7C3AED', card:'#12122a' };
   const filter = document.getElementById('kb-filter').value;
   const colTasks = tasks.filter(t => t.status === colId && (!filter || t.tag === filter));
   const board = document.getElementById('board');
 
   board.innerHTML = `
-    <div class="focus-overlay" style="grid-column:1/-1">
-      <div class="focus-header">
+    <div class="focus-overlay" style="grid-column:1/-1;background:${cc.bg}22;border:1px solid ${cc.border}33;border-radius:var(--radius-lg);padding:20px">
+      <div class="focus-header" style="border-bottom-color:${cc.border}44">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="col-title" style="font-size:16px">${col.label}</div>
-          <span class="col-count">${colTasks.length}</span>
+          <div class="col-title" style="font-size:16px;color:${cc.text}">${col.label}</div>
+          <span class="col-count" style="background:${cc.border}22;color:${cc.text}">${colTasks.length}</span>
         </div>
-        <button class="icon-btn" onclick="focusedCol=null;renderBoard()" title="Back to board">
+        <button class="icon-btn" onclick="focusedCol=null;renderBoard()" style="color:${cc.text}">
           <i class="ti ti-arrow-left"></i> Back
         </button>
       </div>
@@ -848,7 +858,7 @@ function renderFocusedCol(colId) {
 
   const grid = document.getElementById('focus-grid');
   if (colTasks.length === 0) {
-    grid.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px 0">No tasks in this column</div>';
+    grid.innerHTML = `<div style="color:${cc.text};opacity:0.4;font-size:13px;padding:20px 0">No tasks in this column</div>`;
     return;
   }
 
@@ -860,15 +870,18 @@ function renderFocusedCol(colId) {
 
     const card = document.createElement('div');
     card.className = 'focus-card';
+    card.style.cssText = `background:${cc.card};border-color:${cc.border}44;border-left:3px solid ${cc.border}`;
     card.innerHTML = `
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
         <span class="tag ${tagCls}">${t.tag}</span>
         ${dl ? `<span class="weekly-due${dl.over?' over':''}" style="font-size:11px;white-space:nowrap">${dl.text}</span>` : ''}
       </div>
       <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:6px">${escHtml(t.title)}</div>
-      ${t.client ? `<div style="font-size:11px;color:var(--text-3)">${escHtml(t.client)}</div>` : ''}
-      ${daysInCol > 0 && t.status !== 'done' ? `<div style="margin-top:8px"><span class="weekly-stuck-days">${daysInCol}d</span></div>` : ''}
+      ${t.client ? `<div style="font-size:11px;color:${cc.text};opacity:0.7">${escHtml(t.client)}</div>` : ''}
+      ${daysInCol > 0 && t.status !== 'done' ? `<div style="margin-top:8px"><span class="weekly-stuck-days" style="background:${cc.border}22;color:${cc.text}">${daysInCol}d</span></div>` : ''}
     `;
+    card.onmouseenter = () => card.style.borderColor = cc.border;
+    card.onmouseleave = () => card.style.borderColor = cc.border + '44';
     card.onclick = () => { openDetail(t.id); playSoundClick(); };
     grid.appendChild(card);
   });
