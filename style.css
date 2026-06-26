@@ -24,42 +24,25 @@
   --radius-lg: 12px;
 }
 
-@property --card-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-@keyframes card-spin { to { --card-angle: 360deg; } }
-
 .card {
-  position: relative;
   border-radius: var(--radius-lg);
   background: rgba(0,0,0,0.88);
-  border: none !important;
+  border: 0.5px solid rgba(255,255,255,0.1) !important;
   isolation: isolate;
+  position: relative;
   overflow: hidden;
-}
-.card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: calc(var(--radius-lg) + 1px);
-  background: linear-gradient(var(--card-angle), #444, #ccc, #888, #333, #eee, #666);
-  z-index: -1;
-  animation: card-spin 4s linear infinite;
 }
 .card::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: rgba(0,0,0,0.88);
-  z-index: -1;
-}
-.card .shimmer-layer {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
+  opacity: 0.035;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.04) 0%, transparent 65%);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
 }
+.card .shimmer-layer { display: none; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -616,7 +599,7 @@ body {
 
 /* Card base — minimized by default */
 .kanban-card {
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.8);
   border: 0.5px solid rgba(255,255,255,0.08);
   border-left: 3px solid transparent;
   border-radius: var(--radius);
@@ -627,14 +610,17 @@ body {
   overflow: hidden;
   position: relative;
 }
-.kanban-card .shimmer-layer {
+.kanban-card::after {
+  content: '';
   position: absolute;
   inset: 0;
   border-radius: var(--radius);
+  opacity: 0.03;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(ellipse at 50% 20%, rgba(255,255,255,0.03) 0%, transparent 70%);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
 }
+.kanban-card .shimmer-layer { display: none; }
 
 /* Minimized state — hide client, meta, totango */
 .kanban-card .card-client,
@@ -882,7 +868,7 @@ body {
 .modal-bg.open { display: flex; }
 .modal {
   background: rgba(0,0,0,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 0.5px solid rgba(180,180,180,0.2);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   width: 100%;
@@ -890,23 +876,6 @@ body {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-}
-.modal::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: calc(var(--radius-lg) + 1px);
-  background: linear-gradient(var(--card-angle), #444, #ccc, #888, #333, #eee, #666);
-  z-index: -1;
-  animation: card-spin 4s linear infinite;
-}
-.modal::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
-  background: rgba(0,0,0,0.92);
-  z-index: -1;
 }
 .modal-header {
   display: flex;
