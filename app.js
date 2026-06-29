@@ -2489,13 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('speech-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') speechAddTask();
   });
-  // Init mute button state
-  const muteBtn = document.getElementById('mute-btn');
-  if (muteBtn && isMuted) {
-    muteBtn.innerHTML = '<i class="ti ti-volume-off"></i>';
-    muteBtn.title = 'Unmute sounds';
-    muteBtn.style.opacity = '0.4';
-  }
+  updateMuteBtn();
 });
 
 // ── 8-BIT SOUND SYSTEM ───────────────────────────────────────────────────────
@@ -2505,13 +2499,24 @@ let isMuted = localStorage.getItem('cs-muted') === 'true';
 function toggleMute() {
   isMuted = !isMuted;
   localStorage.setItem('cs-muted', isMuted);
+  updateMuteBtn();
+}
+
+function updateMuteBtn() {
   const btn = document.getElementById('mute-btn');
-  if (btn) {
-    btn.innerHTML = isMuted
-      ? '<i class="ti ti-volume-off"></i>'
-      : '<i class="ti ti-volume"></i>';
-    btn.title = isMuted ? 'Unmute sounds' : 'Mute sounds';
-    btn.style.opacity = isMuted ? '0.4' : '1';
+  if (!btn) return;
+  if (isMuted) {
+    btn.style.background = 'rgba(239,68,68,0.15)';
+    btn.style.borderColor = 'rgba(239,68,68,0.5)';
+    btn.style.color = '#f87171';
+    btn.innerHTML = '<i class="ti ti-volume-off" style="font-size:14px"></i><span style="font-size:10px;font-weight:600;letter-spacing:.05em">OFF</span>';
+    btn.title = 'Unmute sounds';
+  } else {
+    btn.style.background = 'rgba(34,197,94,0.15)';
+    btn.style.borderColor = 'rgba(34,197,94,0.5)';
+    btn.style.color = '#4ade80';
+    btn.innerHTML = '<i class="ti ti-volume" style="font-size:14px"></i><span style="font-size:10px;font-weight:600;letter-spacing:.05em">ON</span>';
+    btn.title = 'Mute sounds';
   }
 }
 
