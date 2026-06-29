@@ -2489,11 +2489,34 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('speech-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') speechAddTask();
   });
+  // Init mute button state
+  const muteBtn = document.getElementById('mute-btn');
+  if (muteBtn && isMuted) {
+    muteBtn.innerHTML = '<i class="ti ti-volume-off"></i>';
+    muteBtn.title = 'Unmute sounds';
+    muteBtn.style.opacity = '0.4';
+  }
 });
 
 // ── 8-BIT SOUND SYSTEM ───────────────────────────────────────────────────────
 
+let isMuted = localStorage.getItem('cs-muted') === 'true';
+
+function toggleMute() {
+  isMuted = !isMuted;
+  localStorage.setItem('cs-muted', isMuted);
+  const btn = document.getElementById('mute-btn');
+  if (btn) {
+    btn.innerHTML = isMuted
+      ? '<i class="ti ti-volume-off"></i>'
+      : '<i class="ti ti-volume"></i>';
+    btn.title = isMuted ? 'Unmute sounds' : 'Mute sounds';
+    btn.style.opacity = isMuted ? '0.4' : '1';
+  }
+}
+
 function play8bit(freqs, durations, vol = 0.12) {
+  if (isMuted) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const t = ctx.currentTime;
@@ -2533,29 +2556,17 @@ function playSoundCopy()   { play8bit([880, 440], [0.04, 0.06], 0.08); }
 function playSoundGenerate(){ play8bit([262, 294, 330, 349], [0.07, 0.07, 0.07, 0.07], 0.08); }
 // Done/celebrate — fanfare
 function playDoneSound() {
+  if (isMuted) return;
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const t = ac.currentTime;
 
-    // 8-bit approximation of the iconic "You're The Best" opening riff
+    // Pokémon GB intro — short iconic rising arpeggio + final chord
     const notes = [
-      // Main hook — iconic ascending phrase
-      { f: 392, s: 0.00, d: 0.12 },
-      { f: 440, s: 0.12, d: 0.12 },
-      { f: 494, s: 0.24, d: 0.12 },
-      { f: 523, s: 0.36, d: 0.18 },
-      { f: 494, s: 0.54, d: 0.10 },
-      { f: 523, s: 0.64, d: 0.10 },
-      { f: 587, s: 0.74, d: 0.20 },
-      // Second phrase
-      { f: 659, s: 0.96, d: 0.14 },
-      { f: 587, s: 1.10, d: 0.10 },
-      { f: 523, s: 1.20, d: 0.10 },
-      { f: 587, s: 1.30, d: 0.14 },
-      { f: 659, s: 1.44, d: 0.30 },
-      // Punch finish
-      { f: 784, s: 1.76, d: 0.12 },
-      { f: 880, s: 1.88, d: 0.25 },
+      { f: 523, s: 0.00, d: 0.07 },  // C5
+      { f: 659, s: 0.07, d: 0.07 },  // E5
+      { f: 784, s: 0.14, d: 0.07 },  // G5
+      { f: 1047,s: 0.21, d: 0.18 },  // C6 — held
     ];
 
     notes.forEach(n => {
@@ -2564,24 +2575,20 @@ function playDoneSound() {
       o.connect(g); g.connect(ac.destination);
       o.type = 'square';
       o.frequency.value = n.f;
-      g.gain.setValueAtTime(0.10, t + n.s);
+      g.gain.setValueAtTime(0.09, t + n.s);
       g.gain.exponentialRampToValueAtTime(0.001, t + n.s + n.d);
-      o.start(t + n.s);
-      o.stop(t + n.s + n.d + 0.02);
+      o.start(t + n.s); o.stop(t + n.s + n.d + 0.01);
     });
 
-    // Bass drum pulse
-    [0, 0.36, 0.74, 1.10, 1.44].forEach(s => {
-      const o = ac.createOscillator();
-      const g = ac.createGain();
-      o.connect(g); g.connect(ac.destination);
-      o.type = 'sine';
-      o.frequency.setValueAtTime(120, t + s);
-      o.frequency.exponentialRampToValueAtTime(40, t + s + 0.1);
-      g.gain.setValueAtTime(0.18, t + s);
-      g.gain.exponentialRampToValueAtTime(0.001, t + s + 0.15);
-      o.start(t + s); o.stop(t + s + 0.2);
-    });
+    // Short bass punch on first note
+    const b = ac.createOscillator();
+    const bg = ac.createGain();
+    b.connect(bg); bg.connect(ac.destination);
+    b.type = 'square';
+    b.frequency.value = 130;
+    bg.gain.setValueAtTime(0.07, t);
+    bg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    b.start(t); b.stop(t + 0.1);
 
   } catch(e) {}
 }

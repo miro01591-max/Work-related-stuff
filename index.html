@@ -52,6 +52,13 @@
       </nav>
 
       <div class="sidebar-stats">
+        <button id="mute-btn" onclick="toggleMute()" title="Mute sounds" style="
+          background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;
+          color:rgba(255,255,255,0.5);padding:6px;cursor:pointer;width:100%;
+          font-size:16px;margin-bottom:8px;transition:opacity 0.2s,border-color 0.2s;
+        ">
+          <i class="ti ti-volume"></i>
+        </button>
         <div class="sidebar-stat">
           <div class="sidebar-stat-num" id="hdr-open">0</div>
           <div class="sidebar-stat-lbl">Open</div>
