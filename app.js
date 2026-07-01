@@ -98,206 +98,49 @@ function updateHeaderStats() {
 
 function openTotango() {
   playSoundClick();
-  launchRocket(() => {
+  showLoadingBar('Opening Totango', () => {
     window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
   });
 }
 
-function launchRocket(callback) {
+function showLoadingBar(label, callback) {
   let called = false;
   const once = () => { if (!called) { called = true; callback(); } };
 
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:#000011;z-index:99997;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99997;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer';
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 200; canvas.height = 180;
-  canvas.style.cssText = 'image-rendering:pixelated;width:400px;height:360px';
+  const labelEl = document.createElement('div');
+  labelEl.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.6);letter-spacing:.04em';
+  labelEl.textContent = label;
+  overlay.appendChild(labelEl);
 
-  overlay.appendChild(canvas);
+  const barOuter = document.createElement('div');
+  barOuter.style.cssText = 'width:240px;height:4px;background:rgba(255,255,255,0.1);border-radius:999px;overflow:hidden';
+  const barInner = document.createElement('div');
+  barInner.style.cssText = 'height:100%;width:0%;background:rgba(255,255,255,0.7);border-radius:999px;transition:width 0.05s linear';
+  barOuter.appendChild(barInner);
+  overlay.appendChild(barOuter);
+
   document.body.appendChild(overlay);
 
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  const W = 200, H = 180;
-  let frame = 0, phase = 'count', ry = 130;
-  let exP = [], wL = [], raf;
-
-  const stars = Array.from({length:50}, () => ({
-    x: Math.random()*W|0, y: Math.random()*H|0,
-    c: ['#ffffff','#ffff88','#88ffff','#ffaaff','#aaaaff'][Math.random()*5|0],
-    t: Math.random()*8|0
-  }));
-
-  function px(x,y,w,h,c) { ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
-
-  function drawRocket(x,y) {
-    px(x+4,y,3,2,'#ff2222'); px(x+3,y+2,5,2,'#cc1111'); px(x+2,y+4,7,2,'#ff4444');
-    px(x+2,y+6,7,10,'#dddddd'); px(x+3,y+6,5,10,'#ffffff');
-    px(x+2,y+10,7,2,'#2244ff'); px(x+3,y+10,5,2,'#4466ff');
-    px(x+3,y+7,5,5,'#1133cc'); px(x+4,y+8,3,3,'#5599ff');
-    px(x+4,y+8,2,2,'#88bbff'); px(x+4,y+8,1,1,'#ffffff');
-    px(x+3,y+13,1,1,'#ffff00'); px(x+7,y+13,1,1,'#ffff00');
-    px(x+1,y+12,1,5,'#ff6600'); px(x,y+14,1,3,'#cc4400');
-    px(x+9,y+12,1,5,'#ff6600'); px(x+10,y+14,1,3,'#cc4400');
-    px(x+3,y+16,5,2,'#888888'); px(x+4,y+17,3,1,'#555555');
-  }
-
-  function drawExhaust(x,y) {
-    const f = frame%4;
-    const c1 = ['#ffffff','#ffff00','#ff8800','#ff4400'];
-    const c2 = ['#ffff00','#ff8800','#ff4400','#cc0000'];
-    px(x+4,y,3,5+f,c1[f]); px(x+3,y+1,5,4+f,c2[f]); px(x+5,y,1,8,c1[(f+2)%4]);
-    ctx.globalAlpha=0.25; px(x+2,y+2,7,6,'#ffff00'); ctx.globalAlpha=1;
-  }
-
-  function txt(s,x,y,c,size) {
-    ctx.fillStyle=c;
-    ctx.font=(size||6)+'px monospace';
-    ctx.fillText(s,x,y);
-  }
-
-  function drawSpace() {
-    for(let i=0;i<H;i++) {
-      const b = Math.floor(i/H*40+10);
-      px(0,i,W,1,`rgb(${Math.floor(i/H*8)},0,${b})`);
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 4;
+    barInner.style.width = Math.min(progress, 100) + '%';
+    if (progress >= 100) {
+      clearInterval(interval);
+      overlay.style.transition = 'opacity 0.25s';
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.remove(); once(); }, 260);
     }
-  }
+  }, 18);
 
-  function drawStars() {
-    stars.forEach(s => {
-      px(s.x,s.y,1,1,(frame+s.t)%8<4?s.c:'#111133');
-    });
-  }
-
-  function drawCount() {
-    drawSpace(); drawStars();
-    // Planet
-    const pr=20,ppx=148,ppy=38;
-    for(let dy=-pr;dy<=pr;dy++) for(let dx=-pr;dx<=pr;dx++) {
-      if(dx*dx+dy*dy<=pr*pr) {
-        const d=Math.sqrt(dx*dx+dy*dy)/pr;
-        px(ppx+dx,ppy+dy,1,1,d<0.35?'#ff9900':d<0.65?'#ff6600':d<0.85?'#cc3300':'#991100');
-      }
-    }
-    for(let i=-26;i<=26;i++) if(Math.abs(i)>18) { px(ppx+i,ppy,1,1,'#ffbb44'); px(ppx+i,ppy+1,1,1,'#ff8800'); }
-    // Moon
-    for(let dy=-8;dy<=8;dy++) for(let dx=-8;dx<=8;dx++) {
-      if(dx*dx+dy*dy<=64) px(30+dx,55+dy,1,1,dx<0?'#888888':'#cccccc');
-    }
-    // Ground
-    px(0,152,W,28,'#003300'); px(0,152,W,3,'#004400');
-    for(let i=0;i<W;i+=10) px(i,153,5,1,'#005500');
-    // Buildings
-    [[10,130,18,22,'#222244'],[34,140,12,12,'#1a1a3a'],[160,125,22,27,'#222244'],[188,138,14,14,'#1a1a3a']].forEach(([x,y,w,h,c]) => {
-      px(x,y,w,h,c);
-      for(let wy=y+2;wy<y+h-2;wy+=4) for(let wx=x+2;wx<x+w-2;wx+=4)
-        px(wx,wy,2,2,(frame+wx+wy)%7<3?'#ffff44':'#222244');
-    });
-    // Pad
-    px(82,142,36,12,'#666666'); px(85,138,30,6,'#888888'); px(88,135,24,5,'#aaaaaa');
-    px(82,153,6,3,'#ff3300'); px(112,153,6,3,'#ff3300');
-    px(84,135,3,8,'#444444'); px(113,135,3,8,'#444444');
-    // Rocket
-    drawRocket(90,114);
-    // Smoke
-    if(frame>18) {
-      const sc=['#aaaaaa','#888888','#cccccc','#dddddd'];
-      for(let i=0;i<5;i++) { const sx=86+((frame*2+i*16)%24)-6; px(sx,148-i*3,4,4,sc[i%4]); }
-    }
-    if(frame>30) drawExhaust(90,132);
-    // HUD
-    px(0,0,W,14,'#000011'); px(0,166,W,14,'#000011');
-    ctx.strokeStyle='#6600cc'; ctx.lineWidth=1; ctx.strokeRect(0,0,W,14); ctx.strokeRect(0,166,W,14);
-    txt('TOTANGO MISSION',8,10,'#00ffff',5);
-    const cnt = 3-Math.floor(frame/22)|0;
-    if(cnt>0) { px(82,68,36,30,'#00000099'); txt('T-'+cnt,90,88,'#ffff00',12); }
-    else { px(60,68,80,24,'#00000099'); txt('LAUNCH!',66,85,'#ff4444',9); }
-    txt('* PRESS START *',44,174,'#aa88ff',5);
-    if(frame>=88) phase='launch';
-  }
-
-  function drawLaunch() {
-    drawSpace();
-    stars.forEach(s=>{s.y+=2.2;if(s.y>H)s.y=0;px(s.x,s.y,1,1,s.c);});
-    ry -= 2.8+(frame-88)*0.1;
-    for(let i=0;i<4;i++) exP.push({
-      x:92+(Math.random()-.5)*8, y:ry+18,
-      vx:(Math.random()-.5)*1.5, vy:2.5+Math.random()*3, life:8+Math.random()*6,
-      c:['#ffffff','#ffff00','#ff8800','#ff5500','#ff2200'][Math.random()*5|0]
-    });
-    exP.forEach(ep=>{ep.x+=ep.vx;ep.y+=ep.vy;ep.life--;if(ep.life>0)px(ep.x,ep.y,2,2,ep.c);});
-    exP=exP.filter(ep=>ep.life>0);
-    if(frame>106) {
-      const lc=['#00ffff','#ff88ff','#ffff00','#88ff88','#ff8800','#ffffff'];
-      for(let i=0;i<6;i++) { const lx=(i*34+frame*7)%W; px(lx,ry+4+i*3,10+i*2,1,lc[i]); }
-    }
-    if(ry>-25) { drawRocket(90,ry); drawExhaust(90,ry+18); }
-    px(0,0,W,14,'#000011'); px(0,166,W,14,'#000011');
-    ctx.strokeStyle='#ff2244'; ctx.lineWidth=1; ctx.strokeRect(0,0,W,14);
-    txt('TOTANGO',6,10,'#00ffff',5);
-    txt(Math.min(99999,(frame-88)*180)|0+'',90,10,'#ffff00',5);
-    txt('* LAUNCHING *',48,174,'#ff8800',5);
-    if(ry<-35){phase='warp';frame=0;}
-  }
-
-  function drawWarp() {
-    px(0,0,W,H,'#000000');
-    if(frame<4) wL=Array.from({length:32},(_,i)=>({
-      x:W/2,y:H/2,a:Math.random()*Math.PI*2,sp:3+Math.random()*6,len:2,
-      c:['#00ffff','#ff00ff','#ffff00','#ffffff','#88ffff','#ff88ff','#ffff88','#ff8800'][i%8]
-    }));
-    wL.forEach(l=>{
-      l.len+=l.sp;
-      ctx.strokeStyle=l.c; ctx.lineWidth=1; ctx.beginPath();
-      ctx.moveTo(l.x+Math.cos(l.a)*(l.len-l.sp),l.y+Math.sin(l.a)*(l.len-l.sp));
-      ctx.lineTo(l.x+Math.cos(l.a)*l.len,l.y+Math.sin(l.a)*l.len); ctx.stroke();
-    });
-    if(frame>28) {
-      px(30,56,140,56,'#000000');
-      ctx.strokeStyle='#00ffff'; ctx.lineWidth=1; ctx.strokeRect(30,56,140,56);
-      ctx.strokeStyle='#ff00ff'; ctx.strokeRect(32,58,136,52);
-      txt('TOTANGO',42,76,'#00ffff',8);
-      txt('OPENING...',42,92,'#ffff00',6);
-      txt('.'.repeat((frame-28)%8),124,92,'#ff88ff',6);
-    }
-    if(frame>60){
-      cancelAnimationFrame(raf);
-      overlay.style.transition='opacity 0.4s';
-      overlay.style.opacity='0';
-      setTimeout(()=>{overlay.remove();once();},420);
-      return;
-    }
-  }
-
-  // 8-bit rocket sound
-  try {
-    const ac = new (window.AudioContext||window.webkitAudioContext)();
-    const t = ac.currentTime;
-    const rumble = ac.createOscillator(); const rg = ac.createGain();
-    rumble.connect(rg); rg.connect(ac.destination);
-    rumble.type='sawtooth'; rumble.frequency.setValueAtTime(60,t); rumble.frequency.linearRampToValueAtTime(200,t+2.5);
-    rg.gain.setValueAtTime(0.07,t); rg.gain.linearRampToValueAtTime(0,t+2.5);
-    rumble.start(t); rumble.stop(t+2.5);
-    [330,440,550,660,880,1100].forEach((f,i)=>{
-      const o=ac.createOscillator(),g=ac.createGain();
-      o.connect(g);g.connect(ac.destination);
-      o.type='square';o.frequency.value=f;
-      g.gain.setValueAtTime(0.06,t+i*0.1);
-      g.gain.exponentialRampToValueAtTime(0.001,t+i*0.1+0.12);
-      o.start(t+i*0.1);o.stop(t+i*0.1+0.15);
-    });
-  } catch(e){}
-
-  function tick() {
-    ctx.clearRect(0,0,W,H);
-    if(phase==='count') drawCount();
-    else if(phase==='launch') drawLaunch();
-    else drawWarp();
-    frame++;
-    raf = requestAnimationFrame(tick);
-  }
-  raf = requestAnimationFrame(tick);
+  overlay.onclick = () => {
+    clearInterval(interval);
+    overlay.remove();
+    once();
+  };
 }
 
 
@@ -468,7 +311,15 @@ function buildPlainText() {
     const key = ta.dataset.key;
     const sec = sections.find(s => s.key === key);
     if (sec && ta.value.trim()) {
-      parts.push(`${sec.label}: ${ta.value.trim()}`);
+      let val = ta.value.trim();
+      if (key === 'nextSteps') {
+        // Ensure each bullet starts on its own line
+        val = val
+          .replace(/\s*-\s+/g, '\n- ')   // normalize "- " separators onto new lines
+          .replace(/^\n/, '')             // strip leading newline if present
+          .trim();
+      }
+      parts.push(`${sec.label}: \n${val}`);
     }
   });
   return parts.join('\n\n');
@@ -489,11 +340,17 @@ function buildHtmlText() {
     const key = ta.dataset.key;
     const sec = sections.find(s => s.key === key);
     if (sec && ta.value.trim()) {
-      // Convert newlines to <br>, preserve bullet points
-      const content = ta.value.trim()
+      let val = ta.value.trim();
+      if (key === 'nextSteps') {
+        val = val
+          .replace(/\s*-\s+/g, '\n- ')
+          .replace(/^\n/, '')
+          .trim();
+      }
+      const content = val
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/\n/g, '<br>');
-      parts.push(`<p><strong>${sec.label}:</strong> ${content}</p>`);
+      parts.push(`<p><strong>${sec.label}:</strong><br>${content}</p>`);
     }
   });
   return parts.join('\n');
@@ -1487,136 +1344,11 @@ function openSendToTotango() {
 
   // Copy touchpoint to clipboard first
   copyTP();
+  playSoundClick();
 
-  // 8-bit overlay
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:#000011;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;image-rendering:pixelated;font-family:"Press Start 2P",monospace';
-
-  const canvas = document.createElement('canvas');
-  canvas.width = 400; canvas.height = 300;
-  canvas.style.cssText = 'width:400px;height:300px;image-rendering:pixelated';
-  overlay.appendChild(canvas);
-
-  const hint = document.createElement('div');
-  hint.style.cssText = 'font-family:"Press Start 2P",monospace;font-size:8px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center';
-  hint.textContent = '[ PRESS ANY KEY ]';
-  overlay.appendChild(hint);
-
-  document.body.appendChild(overlay);
-
-  // Load pixel font
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap';
-  document.head.appendChild(link);
-
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  const W = 400, H = 300;
-  let frame = 0;
-
-  const stars = Array.from({length: 40}, () => ({
-    x: Math.random()*W|0, y: Math.random()*H|0,
-    c: ['#00ffff','#ffff00','#ff00ff','#ffffff','#88ff88'][Math.random()*5|0],
-    t: Math.random()*8|0
-  }));
-
-  function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
-
-  function drawFloppy(x, y) {
-    // floppy disk icon
-    px(x,y,32,32,'#dddddd');
-    px(x+2,y+2,28,10,'#333333');
-    px(x+6,y+4,8,6,'#888888');
-    px(x+8,y+20,16,10,'#888888');
-    px(x+10,y+22,12,6,'#cccccc');
-  }
-
-  function tick() {
-    ctx.clearRect(0,0,W,H);
-    px(0,0,W,H,'#000011');
-
-    // Stars
-    stars.forEach(s => {
-      const tw = (frame+s.t)%8 < 4;
-      px(s.x,s.y,1,1,tw?s.c:'#111133');
-    });
-
-    // Border blink
-    const bc = frame%8<4?'#00ffff':'#ff00ff';
-    ctx.strokeStyle=bc; ctx.lineWidth=3;
-    ctx.strokeRect(4,4,W-8,H-8);
-    ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
-    ctx.strokeRect(8,8,W-16,H-16);
-
-    // Floppy icon
-    drawFloppy(W/2-16, 30);
-
-    // COPIED! text
-    ctx.fillStyle = frame%6<3 ? '#ffff00' : '#ff8800';
-    ctx.font = '16px "Press Start 2P",monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('COPIED!', W/2, 100);
-
-    // Client name — smaller, white
-    ctx.fillStyle = '#00ffff';
-    ctx.font = '10px "Press Start 2P",monospace';
-    const maxW = W - 40;
-    const words = company.split(' ');
-    let line = '', lines = [];
-    words.forEach(word => {
-      const test = line ? line + ' ' + word : word;
-      if (ctx.measureText(test).width > maxW && line) {
-        lines.push(line); line = word;
-      } else line = test;
-    });
-    if (line) lines.push(line);
-    lines.slice(0,3).forEach((l,i) => ctx.fillText(l, W/2, 140 + i*20));
-
-    // OPENING TOTANGO...
-    ctx.fillStyle = '#aaaaaa';
-    ctx.font = '7px "Press Start 2P",monospace';
-    const dots = '.'.repeat(frame%6);
-    ctx.fillText('OPENING TOTANGO' + dots, W/2, 240);
-
-    // Progress bar
-    const progress = Math.min(frame / 60, 1);
-    px(40, 255, 320, 8, '#333333');
-    px(40, 255, Math.floor(320*progress), 8, '#00ffff');
-    for(let i=0;i<=320;i+=20) px(40+i, 255, 1, 8, '#000011');
-
-    frame++;
-
-    // Hint blink
-    hint.style.color = frame%10<5 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)';
-
-    if (frame < 65) requestAnimationFrame(tick);
-    else {
-      overlay.remove();
-      window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
-    }
-  }
-
-  // 8-bit sound
-  try {
-    const ac = new (window.AudioContext||window.webkitAudioContext)();
-    const t = ac.currentTime;
-    [523,659,784,1047].forEach((f,i) => {
-      const o = ac.createOscillator(), g = ac.createGain();
-      o.connect(g); g.connect(ac.destination);
-      o.type='square'; o.frequency.value=f;
-      g.gain.setValueAtTime(0.08, t+i*0.08);
-      g.gain.exponentialRampToValueAtTime(0.001, t+i*0.08+0.1);
-      o.start(t+i*0.08); o.stop(t+i*0.08+0.12);
-    });
-  } catch(e){}
-
-  overlay.onclick = () => {
-    overlay.remove();
+  showLoadingBar(`Copied — opening Totango for ${company || 'account'}`, () => {
     window.open('https://app.totango.com/t11/planradar-prod/#/my-business/overview', '_blank');
-  };
-
-  requestAnimationFrame(tick);
+  });
 }
 
 function closeTotangoModal() {
@@ -2779,7 +2511,7 @@ let pacMsgInterval = null;
 function showCharizard(msg) {
   const overlay = document.getElementById('charizard-overlay');
   overlay.style.display = 'flex';
-  startPacmanAnim();
+  startLoadingBarAnim();
 }
 
 function hideCharizard() {
@@ -2788,30 +2520,14 @@ function hideCharizard() {
   if (pacMsgInterval) { clearInterval(pacMsgInterval); pacMsgInterval = null; }
 }
 
-function startPacmanAnim() {
-  if (pacRaf) cancelAnimationFrame(pacRaf);
+function startLoadingBarAnim() {
   const canvas = document.getElementById('charizard-canvas');
   canvas.width  = 360;
   canvas.height = 80;
   const ctx = canvas.getContext('2d');
-  const W = 360, H = 80, CY = 38;
+  const W = 360, H = 80;
 
-  let frame = 0;
-  let pacX  = -30;
-  let dir   = 1;
-  let score = 0;
-
-  const dots = Array.from({length: 13}, (_, i) => ({
-    x: 28 + i * 24, eaten: false, big: i % 4 === 0
-  }));
-
-  const ghosts = [
-    { x: W+60,  color:'#ff0000' },
-    { x: W+100, color:'#ffb8ff' },
-    { x: W+140, color:'#00ffff' },
-  ];
-
-  const msgs = ['GENERATING...', 'WAKA WAKA...', 'ALMOST DONE...', 'CLAUDE IS THINKING...'];
+  const msgs = ['Generating...', 'Analyzing transcript...', 'Almost done...', 'Claude is thinking...'];
   let mi = 0;
   document.getElementById('charizard-msg').textContent = msgs[0];
   pacMsgInterval = setInterval(() => {
@@ -2820,89 +2536,39 @@ function startPacmanAnim() {
     if (el) el.textContent = msgs[mi];
   }, 1800);
 
-  function drawPacman(x, mouthAngle, left) {
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    const s = left ? Math.PI + mouthAngle : mouthAngle;
-    const e = left ? Math.PI - mouthAngle : -mouthAngle;
-    ctx.moveTo(x, CY);
-    ctx.arc(x, CY, 16, s, e);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#0f0f13';
-    ctx.beginPath();
-    ctx.arc(left ? x-5 : x+5, CY-7, 2.5, 0, Math.PI*2);
-    ctx.fill();
-  }
+  // Static background
+  ctx.fillStyle = '#0f0f13';
+  ctx.fillRect(0, 0, W, H);
 
-  function drawGhost(x, color) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, CY-4, 12, Math.PI, 0);
-    ctx.lineTo(x+12, CY+14);
-    for (let i=3; i>=0; i--) {
-      ctx.lineTo(x - 12 + i*8, i%2===0 ? CY+14 : CY+8);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle='white';
-    ctx.beginPath(); ctx.arc(x-4,CY-5,3.5,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+4,CY-5,3.5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#0000cc';
-    ctx.beginPath(); ctx.arc(x-3,CY-4,1.8,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+5,CY-4,1.8,0,Math.PI*2); ctx.fill();
-  }
+  // Indeterminate loading bar
+  const barW = 220, barH = 4, barX = (W-barW)/2, barY = H/2 - barH/2;
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(barX, barY, barW, barH);
 
+  let pos = 0;
   function tick() {
     ctx.fillStyle = '#0f0f13';
     ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(barX, barY, barW, barH);
 
-    // Dashed ground line
-    ctx.strokeStyle = '#1a6bc4'; ctx.lineWidth = 2;
-    ctx.setLineDash([8,4]);
-    ctx.beginPath(); ctx.moveTo(0,CY+20); ctx.lineTo(W,CY+20); ctx.stroke();
-    ctx.setLineDash([]);
-
-    pacX += 2.2 * dir;
-    const mouth = Math.abs(Math.sin(frame*0.28)) * 0.38;
-
-    // Eat dots
-    dots.forEach(d => {
-      if (d.eaten) return;
-      if (Math.abs(pacX - d.x) < 15) { d.eaten=true; score += d.big?50:10; }
-    });
-
-    // Draw dots
-    dots.forEach(d => {
-      if (d.eaten) return;
-      ctx.fillStyle = '#FFD700';
-      ctx.beginPath();
-      ctx.arc(d.x, CY, d.big ? 6 : 3, 0, Math.PI*2);
-      ctx.fill();
-    });
-
-    // Move & draw ghosts
-    ghosts.forEach(g => { g.x -= 2.0; drawGhost(g.x, g.color); });
-
-    drawPacman(pacX, mouth, dir===-1);
-
-    // Score
-    ctx.fillStyle='rgba(255,255,255,0.5)';
-    ctx.font='8px monospace';
-    ctx.fillText(score, W-50, 14);
-
-    // Reset
-    if (pacX > W+40 || pacX < -40) {
-      dir *= -1;
-      dots.forEach(d => d.eaten=false);
-      pacX = dir===1 ? -30 : W+30;
-      ghosts[0].x = dir===1 ? W+60  : -60;
-      ghosts[1].x = dir===1 ? W+100 : -100;
-      ghosts[2].x = dir===1 ? W+140 : -140;
+    pos = (pos + 1.5) % (barW + 80);
+    const segW = 80;
+    const segX = barX - 40 + pos;
+    const clippedX = Math.max(barX, segX);
+    const clippedR = Math.min(barX + barW, segX + segW);
+    if (clippedR > clippedX) {
+      const grad = ctx.createLinearGradient(clippedX, 0, clippedR, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(0.5, 'rgba(255,255,255,0.8)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(clippedX, barY, clippedR - clippedX, barH);
     }
 
-    frame++;
-    pacRaf = requestAnimationFrame(tick);
+    if (document.getElementById('charizard-overlay').style.display === 'flex') {
+      pacRaf = requestAnimationFrame(tick);
+    }
   }
 
   tick();
